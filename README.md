@@ -16,7 +16,7 @@ Claude + audible.
 ## Install
 
 ```bash
-git clone https://github.com/<you>/claudible.git
+git clone https://github.com/blazemalan/claudible.git
 cd claudible
 ./install.sh
 ```
