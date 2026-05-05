@@ -34,25 +34,26 @@ VOICES_CONFIG = HOME / ".config/claudible/voices.json"
 DEFAULT_SPEED = 1.0
 TARGET_CHUNK_CHARS = 400
 
-# Built-in defaults; user can override by writing ~/.config/claudible/voices.json
-_BUILTIN_DEFAULT_VOICE = "af_heart"
+# Built-in defaults. Users can override entirely by writing
+# ~/.config/claudible/voices.json (see README).
+_BUILTIN_DEFAULT_VOICE = "af_sky"  # Scarlett
 _BUILTIN_VOICES: list[tuple[str, str]] = [
-    ("af_heart", "af_heart"),
-    ("af_bella", "af_bella"),
-    ("af_nicole", "af_nicole"),
-    ("af_sarah", "af_sarah"),
-    ("af_sky", "af_sky"),
-    ("af_nova", "af_nova"),
-    ("af_alloy", "af_alloy"),
-    ("af_aoede", "af_aoede"),
-    ("af_kore", "af_kore"),
-    ("am_fenrir", "am_fenrir"),
-    ("am_michael", "am_michael"),
-    ("am_puck", "am_puck"),
-    ("bf_emma", "bf_emma"),
-    ("bf_isabella", "bf_isabella"),
-    ("bm_fable", "bm_fable"),
-    ("bm_george", "bm_george"),
+    ("Ashley",   "af_heart"),
+    ("Evie",     "af_bella"),
+    ("Teri",     "af_nicole"),
+    ("Bethanie", "af_sarah"),
+    ("Scarlett", "af_sky"),
+    ("Ivy",      "af_nova"),
+    ("Wren",     "af_alloy"),
+    ("Jessica",  "af_aoede"),
+    ("Tatum",    "af_kore"),
+    ("Kevin",    "am_fenrir"),
+    ("Marc",     "am_michael"),
+    ("Nick",     "am_puck"),
+    ("Emma",     "bf_emma"),
+    ("Keira",    "bf_isabella"),
+    ("Joe",      "bm_fable"),
+    ("Wilbur",   "bm_george"),
 ]
 
 

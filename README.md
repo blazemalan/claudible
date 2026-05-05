@@ -76,8 +76,8 @@ LICENSE
 
 ## Customize
 
-- **Voice** - menu bar -> Voice. Default `af_heart` (most natural). 16 voices in menu, all A or B grade per Kokoro's official quality table.
-- **Voice labels** - edit `~/.config/claudible/voices.json` to rename voices ("af_sky" -> "Scarlett" etc) or change which voices appear. Restart Claudible to reload.
+- **Voice** - menu bar -> Voice. Ships with friendly names (Scarlett, Ashley, Evie, ...) over Kokoro's A/B grade voices. Default is Scarlett (`af_sky`).
+- **Customize voice labels** - drop a `voices.json` at `~/.config/claudible/voices.json` to override the menu (rename, reorder, hide voices, change default). See the built-ins in `app/main.py` for the schema. Restart Claudible to reload.
 - **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
 - **Different hotkey** - edit `~/.config/skhd/skhdrc`, run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.
 
