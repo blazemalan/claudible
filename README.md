@@ -1,6 +1,6 @@
 # Claudible
 
-A small macOS menu bar app that reads Claude Code's last response aloud, in af_sky (or any Kokoro voice you pick), with one global hotkey.
+A small macOS menu bar app that reads Claude Code's last response aloud with one global hotkey.
 
 Claude + audible.
 
@@ -76,8 +76,7 @@ LICENSE
 
 ## Customize
 
-- **Voice** - menu bar -> Voice. Ships with friendly names (Scarlett, Ashley, Evie, ...) over Kokoro's A/B grade voices. Default is Scarlett (`af_sky`).
-- **Customize voice labels** - drop a `voices.json` at `~/.config/claudible/voices.json` to override the menu (rename, reorder, hide voices, change default). See the built-ins in `app/main.py` for the schema. Restart Claudible to reload.
+- **Voice** - menu bar -> Voice. Ships with friendly names over Kokoro's A/B grade voices. Default is Scarlett (`af_sky`).
 - **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
 - **Different hotkey** - edit `~/.config/skhd/skhdrc`, run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.
 
