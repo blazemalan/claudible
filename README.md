@@ -11,7 +11,7 @@ Claude + audible.
 ## Hotkeys
 
 - **Cmd + Shift + S** - speak Claude's last response. Press again to stop.
-- **Cmd + Shift + H** - speak whatever you have highlighted (anywhere on your Mac, clipboard preserved).
+- **Cmd + Option + H** - speak whatever you have highlighted (anywhere on your Mac, clipboard preserved).
 
 ## Install
 

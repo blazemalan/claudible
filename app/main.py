@@ -274,6 +274,7 @@ class App(rumps.App):
             icon_path = here.parent / "Resources" / "menubarTemplate.png"
         super().__init__(
             "Claudible",
+            title=" loading...",
             icon=str(icon_path) if icon_path.exists() else None,
             template=True,
             quit_button=None,
@@ -281,7 +282,7 @@ class App(rumps.App):
         self.pipeline = Pipeline()
         self.menu = [
             rumps.MenuItem("Speak last  (Cmd+Shift+S)", callback=self._toggle_speak_menu),
-            rumps.MenuItem("Speak selection  (Cmd+Shift+H)", callback=self._do_selection_menu),
+            rumps.MenuItem("Speak selection  (Cmd+Option+H)", callback=self._do_selection_menu),
             None,
             self._build_voice_menu(),
             self._build_speed_menu(),
@@ -296,8 +297,11 @@ class App(rumps.App):
     def _init_bg(self):
         try:
             self.pipeline.load_model()
+            self.title = ""
+            rumps.notification("Claudible", "", "Ready  -  Cmd+Shift+S to speak")
         except Exception as e:
             log(f"model load failed: {e}")
+            self.title = " error"
             rumps.notification(
                 "Claudible", "Model load failed", str(e)[:120]
             )
