@@ -135,26 +135,41 @@ class Pipeline:
         self.ready = threading.Event()
 
     def load_model(self):
-        from kokoro_onnx import Kokoro
         import numpy
-
         self.np = numpy
-        # Try Apple Neural Engine via CoreML; fall back to CPU.
+
+        # Monkey-patch onnxruntime.InferenceSession so any code that loads ONNX
+        # models (including kokoro-onnx, which doesn't expose `providers`) uses
+        # the CoreML execution provider when available, falling back to CPU.
+        coreml_active = False
         try:
-            self.kokoro = Kokoro(
-                str(MODEL),
-                str(VOICES_BIN),
-                providers=["CoreMLExecutionProvider", "CPUExecutionProvider"],
-            )
-            log("model loaded (CoreML)")
-        except TypeError:
-            # older kokoro-onnx without providers kwarg
-            self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
-            log("model loaded (CPU - older kokoro-onnx)")
+            import onnxruntime as ort
+            available = set(ort.get_available_providers())
+            preferred = []
+            if "CoreMLExecutionProvider" in available:
+                preferred.append("CoreMLExecutionProvider")
+            preferred.append("CPUExecutionProvider")
+            orig_session = ort.InferenceSession
+
+            def _patched_session(*args, **kwargs):
+                if "providers" not in kwargs:
+                    kwargs["providers"] = preferred
+                return orig_session(*args, **kwargs)
+
+            ort.InferenceSession = _patched_session
+            coreml_active = "CoreMLExecutionProvider" in preferred
         except Exception as e:
-            log(f"CoreML load failed ({e}); retrying CPU")
-            self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
-            log("model loaded (CPU fallback)")
+            log(f"could not patch onnxruntime providers: {e}")
+
+        from kokoro_onnx import Kokoro
+        self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
+        # Verify which provider the loaded session actually uses
+        try:
+            sess = getattr(self.kokoro, "sess", None)
+            providers_used = sess.get_providers() if sess else []
+        except Exception:
+            providers_used = []
+        log(f"model loaded; providers={providers_used} (CoreML requested: {coreml_active})")
         self.ready.set()
 
     def split_chunks(self, text: str) -> list[str]:
