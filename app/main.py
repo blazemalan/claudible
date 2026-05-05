@@ -445,18 +445,31 @@ class App(rumps.App):
                 while True:
                     conn, _ = srv.accept()
                     try:
-                        data = conn.recv(64).decode().strip()
-                        if data == "prefetch" and CAPTURE_FILE.exists():
+                        chunks = []
+                        while True:
+                            chunk = conn.recv(4096)
+                            if not chunk:
+                                break
+                            chunks.append(chunk)
+                            if sum(len(c) for c in chunks) > 1024 * 1024:
+                                break
+                        data = b"".join(chunks).decode("utf-8", errors="replace")
+                        head, _, body = data.partition("\n")
+                        head = head.strip()
+                        if head == "prefetch" and CAPTURE_FILE.exists():
                             text = CAPTURE_FILE.read_text()
                             threading.Thread(
                                 target=self.pipeline.prefetch_first,
                                 args=(text,),
                                 daemon=True,
                             ).start()
-                        elif data == "toggle":
+                        elif head == "toggle":
                             self._toggle_speak()
-                        elif data == "selection":
+                        elif head == "selection":
                             self._do_selection()
+                        elif head == "play" and body.strip():
+                            log(f"play (socket): {len(body)} chars")
+                            self.pipeline.play_text(body)
                     finally:
                         conn.close()
             except Exception as e:
