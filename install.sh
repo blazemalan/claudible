@@ -31,10 +31,10 @@ ok "brew deps"
 # 2. Kokoro model files
 bold "Step 2: Kokoro model files"
 mkdir -p "$MODEL_DIR"
-if [ ! -f "$MODEL_DIR/kokoro-v1.0.onnx" ]; then
-  echo "Downloading kokoro-v1.0.onnx (310 MB)..."
-  curl -L -o "$MODEL_DIR/kokoro-v1.0.onnx" \
-    "https://github.com/thewh1teagle/kokoro-onnx/releases/latest/download/kokoro-v1.0.onnx"
+if [ ! -f "$MODEL_DIR/kokoro-v1.0.fp16.onnx" ]; then
+  echo "Downloading kokoro-v1.0.fp16.onnx (169 MB)..."
+  curl -L -o "$MODEL_DIR/kokoro-v1.0.fp16.onnx" \
+    "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.fp16.onnx"
 fi
 if [ ! -f "$MODEL_DIR/voices-v1.0.bin" ]; then
   echo "Downloading voices-v1.0.bin (27 MB)..."

@@ -23,7 +23,7 @@ from pathlib import Path
 import rumps
 
 HOME = Path.home()
-MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.onnx"
+MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.fp16.onnx"
 VOICES_BIN = HOME / ".local/share/kokoro-tts/voices-v1.0.bin"
 CACHE_DIR = Path("/tmp/kokoro-cache")
 CAPTURE_FILE = Path("/tmp/claude-last-response.txt")

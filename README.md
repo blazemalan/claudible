@@ -24,7 +24,7 @@ Then open `Claudible.app` from `/Applications/`. First time you press the hotkey
 
 The installer:
 
-- Downloads the Kokoro model (~340 MB) to `~/.local/share/kokoro-tts/`
+- Downloads the Kokoro fp16 model (~196 MB total) to `~/.local/share/kokoro-tts/`
 - Builds the `.app` bundle with `py2app`
 - Copies it to `/Applications/Claudible.app`
 - Installs `skhd` (a tiny hotkey daemon) and configures Cmd+Option+S
