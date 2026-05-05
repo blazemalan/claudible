@@ -1,3 +1,2 @@
-# Claudible hotkeys (delivered via /tmp/claudible.sock to the running app)
+# Claudible hotkey (delivered via /tmp/claudible.sock to the running app)
 cmd + shift - s : /bin/bash __PROJECT__/scripts/speak-toggle.sh
-cmd + alt - h   : /bin/bash __PROJECT__/scripts/speak-selection.sh

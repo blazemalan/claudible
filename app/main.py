@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Claudible: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
 
-Single-file design. Loads the Kokoro model on launch, listens for global hotkeys
-(Cmd+Shift+S to toggle speak/stop, Cmd+Shift+H to speak the current selection),
-and listens on /tmp/claudible.sock for "prefetch" signals from the Claude Code
-Stop hook so the first chunk is already cached when the user presses the hotkey.
+Single-file design. Loads the Kokoro model on launch, accepts a global toggle
+hotkey (Cmd+Shift+S, delivered via skhd through /tmp/claudible.sock), and
+prefetches Claude responses as they finish.
 On Quit, clears /tmp/kokoro-cache.
 """
 from __future__ import annotations
@@ -282,7 +281,6 @@ class App(rumps.App):
         self.pipeline = Pipeline()
         self.menu = [
             rumps.MenuItem("Speak last  (Cmd+Shift+S)", callback=self._toggle_speak_menu),
-            rumps.MenuItem("Speak selection  (Cmd+Option+H)", callback=self._do_selection_menu),
             None,
             self._build_voice_menu(),
             self._build_speed_menu(),
@@ -343,19 +341,6 @@ class App(rumps.App):
     def _toggle_speak_menu(self, _):
         self._toggle_speak()
 
-    def _do_selection_menu(self, _):
-        # The menu item runs the same script the hotkey does (skhd-spawned bash
-        # context, where osascript Cmd+C actually works). Avoids the in-app
-        # AX / CGEvent path that has permission quirks.
-        script = Path("/Users/bmalan/Projects/claudible/scripts/speak-selection.sh")
-        if not script.exists():
-            here = Path(__file__).resolve().parent.parent.parent
-            script = here / "scripts" / "speak-selection.sh"
-        try:
-            subprocess.Popen(["/bin/bash", str(script)], start_new_session=True)
-        except Exception as e:
-            log(f"selection menu launch failed: {e}")
-
     def _open_log(self, _):
         subprocess.Popen(["open", str(LOG_FILE)])
 
@@ -379,74 +364,6 @@ class App(rumps.App):
             return
         text = CAPTURE_FILE.read_text()
         self.pipeline.play_text(text)
-
-    def _do_selection(self):
-        log("selection: starting")
-        # Approach 1: ask the focused UI element for its selected text via AX.
-        # This works for any native app that exposes selection (Safari, Notes,
-        # TextEdit, Mail, most native apps). No keystroke synthesis needed.
-        sel = self._ax_read_selection()
-        if sel:
-            log(f"selection (AX): speaking {len(sel)} chars")
-            self.pipeline.play_text(sel)
-            return
-        log("selection: AX returned nothing, falling back to Cmd+C clipboard")
-        # Approach 2 (fallback): synthesize Cmd+C, read clipboard, restore.
-        orig = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
-        try:
-            from Quartz import (
-                CGEventCreateKeyboardEvent, CGEventPost, CGEventSetFlags,
-                CGEventSourceFlagsState, kCGEventSourceStateHIDSystemState,
-                kCGHIDEventTap, kCGEventFlagMaskCommand,
-                kCGEventFlagMaskShift, kCGEventFlagMaskAlternate,
-                kCGEventFlagMaskControl,
-            )
-            modifiers_mask = (kCGEventFlagMaskCommand | kCGEventFlagMaskShift
-                              | kCGEventFlagMaskAlternate | kCGEventFlagMaskControl)
-            for _ in range(60):
-                if not (CGEventSourceFlagsState(kCGEventSourceStateHIDSystemState)
-                        & modifiers_mask):
-                    break
-                time.sleep(0.01)
-            kCC = 8
-            down = CGEventCreateKeyboardEvent(None, kCC, True)
-            CGEventSetFlags(down, kCGEventFlagMaskCommand)
-            CGEventPost(kCGHIDEventTap, down)
-            up = CGEventCreateKeyboardEvent(None, kCC, False)
-            CGEventSetFlags(up, kCGEventFlagMaskCommand)
-            CGEventPost(kCGHIDEventTap, up)
-        except Exception as e:
-            log(f"selection: CGEventPost failed: {e}")
-            return
-        time.sleep(0.18)
-        sel = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
-        subprocess.run(["pbcopy"], input=orig, text=True)
-        if not sel or sel == orig:
-            log("selection: clipboard unchanged (nothing selected)")
-            return
-        log(f"selection (clipboard): speaking {len(sel)} chars")
-        self.pipeline.play_text(sel)
-
-    def _ax_read_selection(self) -> str | None:
-        try:
-            from ApplicationServices import (
-                AXUIElementCreateSystemWide,
-                AXUIElementCopyAttributeValue,
-            )
-            kFocused = "AXFocusedUIElement"
-            kSelected = "AXSelectedText"
-            sys_el = AXUIElementCreateSystemWide()
-            err, focused = AXUIElementCopyAttributeValue(sys_el, kFocused, None)
-            if err != 0 or not focused:
-                return None
-            err, value = AXUIElementCopyAttributeValue(focused, kSelected, None)
-            if err != 0 or not value:
-                return None
-            text = str(value)
-            return text if text.strip() else None
-        except Exception as e:
-            log(f"AX read failed: {e}")
-            return None
 
     def _start_socket_server(self):
         def serve():
@@ -479,11 +396,6 @@ class App(rumps.App):
                             ).start()
                         elif head == "toggle":
                             self._toggle_speak()
-                        elif head == "selection":
-                            self._do_selection()
-                        elif head == "play" and body.strip():
-                            log(f"play (socket): {len(body)} chars")
-                            self.pipeline.play_text(body)
                     finally:
                         conn.close()
             except Exception as e:
