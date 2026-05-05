@@ -12,8 +12,6 @@ Claude + audible.
 
 **Cmd + Shift + S** - speak Claude's last response. Press again to stop.
 
-(A "speak the highlighted text anywhere" hotkey is on the roadmap for v2 - macOS's permission model around third-party clipboard / selection access turned out to be messier than expected.)
-
 ## Install
 
 ```bash
@@ -83,6 +81,3 @@ LICENSE
 - **More voices** - edit `VOICES` in `app/main.py` (kokoro-onnx ships 54).
 - **Different hotkey** - edit `~/.config/skhd/skhdrc`, run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.
 
-## Read highlighted text instead?
-
-Use macOS's built-in **Option+Esc** (Spoken Content -> Speak Selection in Accessibility settings). It uses your system Siri voice and works on any selected text. Pair Claudible (Cmd+Shift+S, last Claude response) with Option+Esc (manual selection) and you've got both bases covered.
