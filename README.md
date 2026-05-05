@@ -10,7 +10,7 @@ Claude + audible.
 
 ## Hotkey
 
-**Cmd + Shift + S** - speak Claude's last response. Press again to stop.
+**Cmd + Option + S** - speak Claude's last response. Press again to stop.
 
 ## Install
 
@@ -27,7 +27,7 @@ The installer:
 - Downloads the Kokoro model (~340 MB) to `~/.local/share/kokoro-tts/`
 - Builds the `.app` bundle with `py2app`
 - Copies it to `/Applications/Claudible.app`
-- Installs `skhd` (a tiny hotkey daemon) and configures Cmd+Shift+S
+- Installs `skhd` (a tiny hotkey daemon) and configures Cmd+Option+S
 - Wires a Claude Code Stop hook so the app gets a "prefetch" signal as soon as Claude finishes a response
 
 ## How it works
@@ -45,7 +45,7 @@ Claude Code finishes a response
 [Claudible.app] synthesizes and caches the first chunk
         |
         v
-You press Cmd+Shift+S
+You press Cmd+Option+S
         |
         v
 [skhd] runs scripts/speak-toggle.sh, which sends "toggle" over the socket
@@ -64,7 +64,7 @@ app/
   requirements.txt
 scripts/
   tts-capture.sh       # Claude Code Stop hook
-  speak-toggle.sh      # what skhd runs on Cmd+Shift+S
+  speak-toggle.sh      # what skhd runs on Cmd+Option+S
 skhd/
   skhdrc               # hotkey config template
 claude-config/
@@ -76,7 +76,7 @@ LICENSE
 
 ## Customize
 
-- **Voice** - menu bar -> Voice. af_sky default; af_heart, af_bella, af_nova, am_adam, bf_emma, bm_george available.
+- **Voice** - menu bar -> Voice. Default `af_heart` (most natural). 28 voices in menu (American/British, female/male). Kokoro ships 54 total.
 - **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
 - **More voices** - edit `VOICES` in `app/main.py` (kokoro-onnx ships 54).
 - **Different hotkey** - edit `~/.config/skhd/skhdrc`, run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.

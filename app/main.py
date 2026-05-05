@@ -30,10 +30,21 @@ CAPTURE_FILE = Path("/tmp/claude-last-response.txt")
 SOCKET_PATH = Path("/tmp/claudible.sock")
 LOG_FILE = Path("/tmp/claudible.log")
 
-DEFAULT_VOICE = "af_sky"
+DEFAULT_VOICE = "af_heart"
 DEFAULT_SPEED = 1.0
 TARGET_CHUNK_CHARS = 400
-VOICES = ["af_sky", "af_heart", "af_bella", "af_nova", "am_adam", "bf_emma", "bm_george"]
+VOICES = [
+    # American female
+    "af_heart", "af_bella", "af_nicole", "af_sarah", "af_sky", "af_nova",
+    "af_alloy", "af_aoede", "af_jessica", "af_kore", "af_river",
+    # American male
+    "am_adam", "am_echo", "am_eric", "am_liam", "am_michael", "am_onyx",
+    "am_fenrir", "am_puck", "am_santa",
+    # British female
+    "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
+    # British male
+    "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
+]
 SPEEDS = [0.9, 1.0, 1.1, 1.2]
 
 
@@ -280,7 +291,7 @@ class App(rumps.App):
         )
         self.pipeline = Pipeline()
         self.menu = [
-            rumps.MenuItem("Speak last  (Cmd+Shift+S)", callback=self._toggle_speak_menu),
+            rumps.MenuItem("Speak last  (Cmd+Option+S)", callback=self._toggle_speak_menu),
             None,
             self._build_voice_menu(),
             self._build_speed_menu(),
@@ -296,7 +307,7 @@ class App(rumps.App):
         try:
             self.pipeline.load_model()
             self.title = ""
-            rumps.notification("Claudible", "", "Ready  -  Cmd+Shift+S to speak")
+            rumps.notification("Claudible", "", "Ready  -  Cmd+Option+S to speak")
         except Exception as e:
             log(f"model load failed: {e}")
             self.title = " error"
