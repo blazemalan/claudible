@@ -20,7 +20,7 @@ OPTIONS = {
         "LSUIElement": True,
         "NSHumanReadableCopyright": "MIT",
     },
-    "packages": ["rumps", "pynput", "Quartz"],
+    "packages": ["rumps", "pynput", "Quartz", "ApplicationServices"],
     "resources": ["menubarTemplate.png"],
 }
 

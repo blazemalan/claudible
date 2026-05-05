@@ -368,6 +368,16 @@ class App(rumps.App):
 
     def _do_selection(self):
         log("selection: starting")
+        # Approach 1: ask the focused UI element for its selected text via AX.
+        # This works for any native app that exposes selection (Safari, Notes,
+        # TextEdit, Mail, most native apps). No keystroke synthesis needed.
+        sel = self._ax_read_selection()
+        if sel:
+            log(f"selection (AX): speaking {len(sel)} chars")
+            self.pipeline.play_text(sel)
+            return
+        log("selection: AX returned nothing, falling back to Cmd+C clipboard")
+        # Approach 2 (fallback): synthesize Cmd+C, read clipboard, restore.
         orig = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
         try:
             from Quartz import (
@@ -377,16 +387,14 @@ class App(rumps.App):
                 kCGEventFlagMaskShift, kCGEventFlagMaskAlternate,
                 kCGEventFlagMaskControl,
             )
-            # Wait for the user to release the hotkey modifiers (Cmd/Shift/etc).
-            # If we send Cmd+C while Shift is still down, apps see Cmd+Shift+C.
             modifiers_mask = (kCGEventFlagMaskCommand | kCGEventFlagMaskShift
                               | kCGEventFlagMaskAlternate | kCGEventFlagMaskControl)
-            for _ in range(40):  # up to 0.4 s
+            for _ in range(60):
                 if not (CGEventSourceFlagsState(kCGEventSourceStateHIDSystemState)
                         & modifiers_mask):
                     break
                 time.sleep(0.01)
-            kCC = 8  # 'c' key code
+            kCC = 8
             down = CGEventCreateKeyboardEvent(None, kCC, True)
             CGEventSetFlags(down, kCGEventFlagMaskCommand)
             CGEventPost(kCGHIDEventTap, down)
@@ -402,8 +410,29 @@ class App(rumps.App):
         if not sel or sel == orig:
             log("selection: clipboard unchanged (nothing selected)")
             return
-        log(f"selection: speaking {len(sel)} chars")
+        log(f"selection (clipboard): speaking {len(sel)} chars")
         self.pipeline.play_text(sel)
+
+    def _ax_read_selection(self) -> str | None:
+        try:
+            from ApplicationServices import (
+                AXUIElementCreateSystemWide,
+                AXUIElementCopyAttributeValue,
+            )
+            kFocused = "AXFocusedUIElement"
+            kSelected = "AXSelectedText"
+            sys_el = AXUIElementCreateSystemWide()
+            err, focused = AXUIElementCopyAttributeValue(sys_el, kFocused, None)
+            if err != 0 or not focused:
+                return None
+            err, value = AXUIElementCopyAttributeValue(focused, kSelected, None)
+            if err != 0 or not value:
+                return None
+            text = str(value)
+            return text if text.strip() else None
+        except Exception as e:
+            log(f"AX read failed: {e}")
+            return None
 
     def _start_socket_server(self):
         def serve():
