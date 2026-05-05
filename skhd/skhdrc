@@ -1,5 +1,0 @@
-# Cmd+Option+S : read Claude's last response aloud (interrupts if already playing)
-cmd + alt - s : /bin/bash /Users/bmalan/.claude/scripts/speak-last.sh
-
-# Cmd+Option+X : stop playback
-cmd + alt - x : /bin/bash /Users/bmalan/.claude/scripts/speak-stop.sh

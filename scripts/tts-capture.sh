@@ -1,20 +1,18 @@
 #!/bin/bash
-# Silently capture Claude's last substantial response to /tmp/claude-last-response.txt
-# Does NOT play audio. Use /speak to play.
+# Stop hook for Claude Code: write the last assistant message to a temp file
+# and signal the claude-tts app (if running) to pre-synthesize the first chunk.
 
 CAPTURE_FILE="/tmp/claude-last-response.txt"
+SOCKET="/tmp/claude-tts.sock"
 MIN_LENGTH=50
 
-# Wait for the transcript file to fully flush (race condition fix)
-sleep 1
+sleep 1  # let transcript flush
 
 input=$(cat)
 transcript_path=$(echo "$input" | jq -r '.transcript_path')
 transcript_path="${transcript_path/#\~/$HOME}"
-
 [ ! -f "$transcript_path" ] && exit 0
 
-# Walk transcript backwards, find latest assistant text that came AFTER any tool_result
 seen_tool_result=0
 claude_response=""
 while IFS= read -r line; do
@@ -31,9 +29,22 @@ while IFS= read -r line; do
   fi
 done < <(tail -r "$transcript_path")
 
-# Skip short responses (e.g. "Speaking." from /speak itself) so big response stays cached
 if [ ${#claude_response} -ge $MIN_LENGTH ]; then
   echo "$claude_response" > "$CAPTURE_FILE"
+  # Ping the running claude-tts app so it pre-synthesizes the first chunk
+  if [ -S "$SOCKET" ]; then
+    /usr/bin/python3 -c "
+import socket
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+try:
+    s.settimeout(0.5)
+    s.connect('$SOCKET')
+    s.sendall(b'prefetch')
+    s.close()
+except Exception:
+    pass
+" >/dev/null 2>&1 &
+  fi
 fi
 
 exit 0

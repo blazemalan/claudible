@@ -1,68 +1,78 @@
 # claude-tts
 
-Hands-free Claude Code: read Claude's last response aloud with a global hotkey, using local neural TTS (Kokoro).
+A small macOS menu bar app that reads Claude Code's last response aloud, in af_sky (or any Kokoro voice you pick), with global hotkeys.
 
-- 100% local, no API keys, no internet required for inference
-- Subsecond first-audio after the first cached sentence (sentence-level pre-fetch + on-disk cache)
-- af_sky voice by default; 54 voices available
-- Hotkey works from any app, not just Claude Code
+- 100% local. No API keys, no internet at runtime.
+- Lives in your menu bar. Quits cleanly. Clears its cache on quit.
+- Pre-synthesizes Claude's response while you're still reading the screen, so when you press the hotkey, audio starts in under 200 ms.
 
-## How it works
+## Hotkeys
 
-1. **Capture hook** (`scripts/tts-capture.sh`) - Claude Code Stop hook that silently writes the last assistant response to `/tmp/claude-last-response.txt` after every turn.
-2. **Kokoro server** (`server/kokoro_server.py`) - long-running launchd daemon that loads the Kokoro ONNX model into RAM once. Exposes `POST /play`, `POST /stop`, `GET /health`. Worker thread chunks text into sentences, pre-fetches the next sentence while the current one plays, and caches synthesized WAVs by content hash to `/tmp/kokoro-cache/`.
-3. **Hotkeys via skhd** (`skhd/skhdrc`) - global keyboard shortcuts:
-   - `Cmd + Option + S` -> POST `/play` with the captured text (interrupts in-flight playback)
-   - `Cmd + Option + X` -> POST `/stop`
-4. **`/speak` slash command** (`claude-config/speak.md`) - same thing as the hotkey but invokable from inside Claude Code.
-
-## Requirements
-
-- macOS (Apple Silicon recommended)
-- Homebrew
-- ~1.2 GB free RAM for the loaded Kokoro model
-- ~340 MB disk for the model files
+- **Cmd + Shift + S** - speak Claude's last response. Press again to stop.
+- **Cmd + Shift + H** - speak whatever you have highlighted (anywhere on your Mac, clipboard preserved).
 
 ## Install
 
 ```bash
-git clone https://github.com/<you>/claude-tts.git ~/Projects/claude-tts
-cd ~/Projects/claude-tts
+git clone https://github.com/<you>/claude-tts.git
+cd claude-tts
 ./install.sh
 ```
 
+Then open `claude-tts.app` from `/Applications/`. First time you press a hotkey, macOS will ask for Accessibility permission - grant it.
+
 The installer:
-- Installs `uv`, `skhd`, `jq` via Homebrew (if missing)
-- Installs `kokoro-onnx` Python tool via uv
-- Downloads the Kokoro model files (~340 MB) to `~/.local/share/kokoro-tts/`
-- Templates the launchd plist and installs it to `~/Library/LaunchAgents/`
-- Drops `skhdrc` into `~/.config/skhd/`
-- Wires the Claude Code Stop hook into `~/.claude/settings.json`
-- Drops `speak.md` into `~/.claude/commands/`
-- Loads both launchd agents (Kokoro server + skhd)
 
-After install, press `Cmd + Option + S` once. macOS will prompt for Accessibility permission for skhd. Grant it and you're done.
+- Downloads the Kokoro model (~340 MB) to `~/.local/share/kokoro-tts/`
+- Builds the `.app` bundle with `py2app`
+- Copies it to `/Applications/claude-tts.app`
+- Wires a Claude Code Stop hook so the app gets a "prefetch" signal as soon as Claude finishes a response
 
-## Configure
-
-- **Voice**: edit `KOKORO_VOICE` in `~/Library/LaunchAgents/com.bmalan.kokoro-tts.plist`. Reload with `launchctl unload ... && launchctl load ...`. List of voices: see `kokoro-onnx` docs.
-- **Hotkeys**: edit `skhd/skhdrc` and run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.
-- **Trigger**: tweak the `Cmd + Option + S` line in `skhd/skhdrc`.
-
-## Files
+## How it works
 
 ```
-server/kokoro_server.py        # the long-running TTS daemon
-scripts/speak-last.sh          # POST /play; called by hotkey + /speak
-scripts/speak-stop.sh          # POST /stop
-scripts/tts-capture.sh         # Stop hook: writes /tmp/claude-last-response.txt
-launchd/com.bmalan.kokoro-tts.plist
-skhd/skhdrc                    # global hotkey config
-claude-config/speak.md         # /speak slash command
-desktop/test-speak.command     # standalone tester (Terminal)
+Claude Code finishes a response
+        |
+        v
+[Stop hook] writes /tmp/claude-last-response.txt
+        |
+        v
+[Stop hook] sends "prefetch" over /tmp/claude-tts.sock
+        |
+        v
+[claude-tts.app] synthesizes and caches the first chunk
+        |
+        v
+You press Cmd+Shift+S
+        |
+        v
+Audio starts ~100 ms later (cache hit), continues sentence-by-sentence
+with each next chunk synthesized while the current one plays.
+```
+
+## Project layout
+
+```
+app/
+  main.py              # the whole app: rumps menu bar + Kokoro pipeline + hotkeys
+  setup.py             # py2app config
+  requirements.txt
+scripts/
+  tts-capture.sh       # Claude Code Stop hook
+claude-config/
+  speak.md             # optional /speak slash command
 install.sh
+README.md
+LICENSE
 ```
 
-## Why not just use Apple Speak Selection (Option+Esc)?
+## Customize
 
-Apple's built-in Speak Selection works great with Siri voices, but it requires you to manually select text first. This tool is a one-keypress trigger that always reads Claude's last response, no selection needed. Use both - they're complementary.
+- **Voice** - menu bar -> Voice. af_sky default; af_heart, af_bella, af_nova, am_adam, bf_emma, bm_george available.
+- **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
+- **More voices** - edit `VOICES` in `app/main.py` (kokoro-onnx ships 54).
+- **Different hotkeys** - edit the `<cmd>+<shift>+s` strings in `_start_hotkeys` in `app/main.py` (pynput format).
+
+## Why not Apple's Speak Selection (Option+Esc)?
+
+Apple's built-in feature works great with Siri voices, but you have to manually select text first. claude-tts is for the case where you just want the last assistant message read without selecting anything. Use both - they complement each other.
