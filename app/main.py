@@ -30,20 +30,69 @@ CAPTURE_FILE = Path("/tmp/claude-last-response.txt")
 SOCKET_PATH = Path("/tmp/claudible.sock")
 LOG_FILE = Path("/tmp/claudible.log")
 
-DEFAULT_VOICE = "af_heart"
+VOICES_CONFIG = HOME / ".config/claudible/voices.json"
 DEFAULT_SPEED = 1.0
 TARGET_CHUNK_CHARS = 400
-VOICES = [
-    # A grade (top quality, per hexgrad/Kokoro-82M VOICES.md)
-    "af_heart", "af_bella",
-    # B grade - American female
-    "af_nicole", "af_sarah", "af_sky", "af_nova",
-    "af_alloy", "af_aoede", "af_kore",
-    # B grade - American male
-    "am_fenrir", "am_michael", "am_puck",
-    # B grade - British
-    "bf_emma", "bf_isabella", "bm_fable", "bm_george",
+
+# Built-in defaults; user can override by writing ~/.config/claudible/voices.json
+_BUILTIN_DEFAULT_VOICE = "af_heart"
+_BUILTIN_VOICES: list[tuple[str, str]] = [
+    ("af_heart", "af_heart"),
+    ("af_bella", "af_bella"),
+    ("af_nicole", "af_nicole"),
+    ("af_sarah", "af_sarah"),
+    ("af_sky", "af_sky"),
+    ("af_nova", "af_nova"),
+    ("af_alloy", "af_alloy"),
+    ("af_aoede", "af_aoede"),
+    ("af_kore", "af_kore"),
+    ("am_fenrir", "am_fenrir"),
+    ("am_michael", "am_michael"),
+    ("am_puck", "am_puck"),
+    ("bf_emma", "bf_emma"),
+    ("bf_isabella", "bf_isabella"),
+    ("bm_fable", "bm_fable"),
+    ("bm_george", "bm_george"),
 ]
+
+
+def load_voices_config() -> tuple[str, list[tuple[str, str]]]:
+    """Read voice list + default from ~/.config/claudible/voices.json.
+    Falls back to built-in defaults on missing file or parse error.
+    """
+    import json
+    if not VOICES_CONFIG.exists():
+        return _BUILTIN_DEFAULT_VOICE, _BUILTIN_VOICES
+    try:
+        data = json.loads(VOICES_CONFIG.read_text())
+        voices = [(str(v["label"]), str(v["id"])) for v in data.get("voices", [])]
+        if not voices:
+            return _BUILTIN_DEFAULT_VOICE, _BUILTIN_VOICES
+        default = str(data.get("default") or voices[0][1])
+        return default, voices
+    except Exception as e:
+        log(f"voices.json parse error: {e}; using defaults")
+        return _BUILTIN_DEFAULT_VOICE, _BUILTIN_VOICES
+
+
+def write_default_voices_config() -> None:
+    """Seed ~/.config/claudible/voices.json from built-ins so the user has a
+    starting point to edit."""
+    import json
+    VOICES_CONFIG.parent.mkdir(parents=True, exist_ok=True)
+    VOICES_CONFIG.write_text(
+        json.dumps(
+            {
+                "_comment": "Customize Claudible's voice menu. 'label' shows in the menu, 'id' is the Kokoro voice id. Restart Claudible to reload.",
+                "default": _BUILTIN_DEFAULT_VOICE,
+                "voices": [{"label": l, "id": i} for l, i in _BUILTIN_VOICES],
+            },
+            indent=2,
+        ) + "\n"
+    )
+
+
+DEFAULT_VOICE, VOICES = load_voices_config()
 SPEEDS = [0.9, 1.0, 1.1, 1.2]
 
 
@@ -326,6 +375,7 @@ class App(rumps.App):
             self._build_speed_menu(),
             None,
             rumps.MenuItem("Open log", callback=self._open_log),
+            rumps.MenuItem("Edit voices...", callback=self._edit_voices),
             rumps.MenuItem("Clear cache", callback=self._clear_cache),
             None,
             rumps.MenuItem("Quit", callback=self._on_quit),
@@ -350,9 +400,10 @@ class App(rumps.App):
 
     def _build_voice_menu(self) -> rumps.MenuItem:
         m = rumps.MenuItem("Voice")
-        for v in VOICES:
-            mi = rumps.MenuItem(v, callback=self._set_voice)
-            if v == DEFAULT_VOICE:
+        for label, voice_id in VOICES:
+            mi = rumps.MenuItem(label, callback=self._set_voice)
+            mi._claudible_voice_id = voice_id
+            if voice_id == DEFAULT_VOICE:
                 mi.state = 1
             m.add(mi)
         return m
@@ -367,10 +418,10 @@ class App(rumps.App):
         return m
 
     def _set_voice(self, sender):
-        for v in VOICES:
-            self.menu["Voice"][v].state = 0
+        for label, _vid in VOICES:
+            self.menu["Voice"][label].state = 0
         sender.state = 1
-        self.pipeline.voice = sender.title
+        self.pipeline.voice = getattr(sender, "_claudible_voice_id", sender.title)
 
     def _set_speed(self, sender):
         for s in SPEEDS:
@@ -383,6 +434,15 @@ class App(rumps.App):
 
     def _open_log(self, _):
         subprocess.Popen(["open", str(LOG_FILE)])
+
+    def _edit_voices(self, _):
+        if not VOICES_CONFIG.exists():
+            write_default_voices_config()
+            rumps.notification(
+                "Claudible", "Voices config",
+                "Created at ~/.config/claudible/voices.json. Restart Claudible after editing."
+            )
+        subprocess.Popen(["open", "-t", str(VOICES_CONFIG)])
 
     def _clear_cache(self, _):
         if CACHE_DIR.exists():
