@@ -340,7 +340,17 @@ class App(rumps.App):
         self._toggle_speak()
 
     def _do_selection_menu(self, _):
-        self._do_selection()
+        # The menu item runs the same script the hotkey does (skhd-spawned bash
+        # context, where osascript Cmd+C actually works). Avoids the in-app
+        # AX / CGEvent path that has permission quirks.
+        script = Path("/Users/bmalan/Projects/claudible/scripts/speak-selection.sh")
+        if not script.exists():
+            here = Path(__file__).resolve().parent.parent.parent
+            script = here / "scripts" / "speak-selection.sh"
+        try:
+            subprocess.Popen(["/bin/bash", str(script)], start_new_session=True)
+        except Exception as e:
+            log(f"selection menu launch failed: {e}")
 
     def _open_log(self, _):
         subprocess.Popen(["open", str(LOG_FILE)])
