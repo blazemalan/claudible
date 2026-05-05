@@ -10,7 +10,7 @@ from setuptools import setup
 
 APP = ["main.py"]
 OPTIONS = {
-    "iconfile": None,
+    "iconfile": "icon.icns",
     "plist": {
         "CFBundleName": "Claudible",
         "CFBundleDisplayName": "Claudible",
