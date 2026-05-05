@@ -139,9 +139,23 @@ class Pipeline:
         import numpy
 
         self.np = numpy
-        self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
+        # Try Apple Neural Engine via CoreML; fall back to CPU.
+        try:
+            self.kokoro = Kokoro(
+                str(MODEL),
+                str(VOICES_BIN),
+                providers=["CoreMLExecutionProvider", "CPUExecutionProvider"],
+            )
+            log("model loaded (CoreML)")
+        except TypeError:
+            # older kokoro-onnx without providers kwarg
+            self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
+            log("model loaded (CPU - older kokoro-onnx)")
+        except Exception as e:
+            log(f"CoreML load failed ({e}); retrying CPU")
+            self.kokoro = Kokoro(str(MODEL), str(VOICES_BIN))
+            log("model loaded (CPU fallback)")
         self.ready.set()
-        log("model loaded")
 
     def split_chunks(self, text: str) -> list[str]:
         text = strip_markdown(text)
