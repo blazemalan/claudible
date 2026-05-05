@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude-tts installer for macOS.
+# Claudible installer for macOS.
 #
 # Builds the menu bar app, copies it to /Applications, downloads the Kokoro
 # model files if missing, wires the Claude Code Stop hook so the app receives
@@ -11,12 +11,12 @@ PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MODEL_DIR="$HOME/.local/share/kokoro-tts"
 CLAUDE_COMMANDS="$HOME/.claude/commands"
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
-APP_DEST="/Applications/claude-tts.app"
+APP_DEST="/Applications/Claudible.app"
 
 bold() { printf "\033[1m%s\033[0m\n" "$*"; }
 ok()   { printf "\033[32m[ok]\033[0m %s\n" "$*"; }
 
-bold "claude-tts installer"
+bold "Claudible installer"
 echo "Project: $PROJECT_DIR"
 echo
 
@@ -44,7 +44,7 @@ fi
 ok "Models in $MODEL_DIR"
 
 # 3. Build the .app bundle
-bold "Step 3: Build claude-tts.app"
+bold "Step 3: Build Claudible.app"
 cd "$PROJECT_DIR/app"
 PY=$(brew --prefix python@3.12)/bin/python3.12
 "$PY" -m venv .venv
@@ -53,12 +53,12 @@ pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt py2app
 rm -rf build dist
 python setup.py py2app >/dev/null
-ok "Built dist/claude-tts.app"
+ok "Built dist/Claudible.app"
 
 # 4. Move to /Applications
 bold "Step 4: Install to /Applications"
 rm -rf "$APP_DEST"
-cp -R dist/claude-tts.app "$APP_DEST"
+cp -R dist/Claudible.app "$APP_DEST"
 ok "Installed at $APP_DEST"
 
 # 5. Wire Claude Code Stop hook

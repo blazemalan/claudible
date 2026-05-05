@@ -1,9 +1,9 @@
 #!/bin/bash
 # Stop hook for Claude Code: write the last assistant message to a temp file
-# and signal the claude-tts app (if running) to pre-synthesize the first chunk.
+# and signal the Claudible app (if running) to pre-synthesize the first chunk.
 
 CAPTURE_FILE="/tmp/claude-last-response.txt"
-SOCKET="/tmp/claude-tts.sock"
+SOCKET="/tmp/claudible.sock"
 MIN_LENGTH=50
 
 sleep 1  # let transcript flush
@@ -31,7 +31,7 @@ done < <(tail -r "$transcript_path")
 
 if [ ${#claude_response} -ge $MIN_LENGTH ]; then
   echo "$claude_response" > "$CAPTURE_FILE"
-  # Ping the running claude-tts app so it pre-synthesizes the first chunk
+  # Ping the running Claudible app so it pre-synthesizes the first chunk
   if [ -S "$SOCKET" ]; then
     /usr/bin/python3 -c "
 import socket

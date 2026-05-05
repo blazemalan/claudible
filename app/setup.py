@@ -1,4 +1,4 @@
-"""py2app build config for claude-tts.app
+"""py2app build config for Claudible.app
 
 Build:
     cd app
@@ -12,9 +12,9 @@ APP = ["main.py"]
 OPTIONS = {
     "iconfile": None,
     "plist": {
-        "CFBundleName": "claude-tts",
-        "CFBundleDisplayName": "claude-tts",
-        "CFBundleIdentifier": "io.github.bmalan.claude-tts",
+        "CFBundleName": "Claudible",
+        "CFBundleDisplayName": "Claudible",
+        "CFBundleIdentifier": "io.github.bmalan.claudible",
         "CFBundleVersion": "0.1.0",
         "CFBundleShortVersionString": "0.1.0",
         "LSUIElement": True,
@@ -25,7 +25,7 @@ OPTIONS = {
 
 setup(
     app=APP,
-    name="claude-tts",
+    name="Claudible",
     options={"py2app": OPTIONS},
     setup_requires=["py2app"],
 )

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""claude-tts: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
+"""Claudible: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
 
 Single-file design. Loads the Kokoro model on launch, listens for global hotkeys
 (Cmd+Shift+S to toggle speak/stop, Cmd+Shift+H to speak the current selection),
-and listens on /tmp/claude-tts.sock for "prefetch" signals from the Claude Code
+and listens on /tmp/claudible.sock for "prefetch" signals from the Claude Code
 Stop hook so the first chunk is already cached when the user presses the hotkey.
 On Quit, clears /tmp/kokoro-cache.
 """
@@ -28,8 +28,8 @@ MODEL = HOME / ".local/share/kokoro-tts/kokoro-v1.0.onnx"
 VOICES_BIN = HOME / ".local/share/kokoro-tts/voices-v1.0.bin"
 CACHE_DIR = Path("/tmp/kokoro-cache")
 CAPTURE_FILE = Path("/tmp/claude-last-response.txt")
-SOCKET_PATH = Path("/tmp/claude-tts.sock")
-LOG_FILE = Path("/tmp/claude-tts.log")
+SOCKET_PATH = Path("/tmp/claudible.sock")
+LOG_FILE = Path("/tmp/claudible.log")
 
 DEFAULT_VOICE = "af_sky"
 DEFAULT_SPEED = 1.0
@@ -266,7 +266,7 @@ class Pipeline:
 
 class App(rumps.App):
     def __init__(self):
-        super().__init__("claude-tts", title="🗣 …", quit_button=None)
+        super().__init__("Claudible", title="🗣 …", quit_button=None)
         self.pipeline = Pipeline()
         self.menu = [
             rumps.MenuItem("Speak last  (Cmd+Shift+S)", callback=self._toggle_speak_menu),
@@ -290,7 +290,7 @@ class App(rumps.App):
             log(f"model load failed: {e}")
             self.title = "🗣 ⚠"
             rumps.notification(
-                "claude-tts", "Model load failed", str(e)[:120]
+                "Claudible", "Model load failed", str(e)[:120]
             )
             return
         self._start_socket_server()
@@ -339,7 +339,7 @@ class App(rumps.App):
     def _clear_cache(self, _):
         if CACHE_DIR.exists():
             shutil.rmtree(CACHE_DIR, ignore_errors=True)
-        rumps.notification("claude-tts", "Cache", "Cleared")
+        rumps.notification("Claudible", "Cache", "Cleared")
 
     def _on_quit(self, _):
         self._cleanup()
@@ -351,7 +351,7 @@ class App(rumps.App):
             return
         if not CAPTURE_FILE.exists():
             rumps.notification(
-                "claude-tts", "Nothing captured", "Wait for Claude's next response"
+                "Claudible", "Nothing captured", "Wait for Claude's next response"
             )
             return
         text = CAPTURE_FILE.read_text()
@@ -420,7 +420,7 @@ class App(rumps.App):
         except Exception as e:
             log(f"hotkey listener failed: {e}")
             rumps.notification(
-                "claude-tts",
+                "Claudible",
                 "Hotkeys disabled",
                 "Grant Accessibility permission in System Settings",
             )

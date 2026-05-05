@@ -1,6 +1,8 @@
-# claude-tts
+# Claudible
 
 A small macOS menu bar app that reads Claude Code's last response aloud, in af_sky (or any Kokoro voice you pick), with global hotkeys.
+
+Claude + audible.
 
 - 100% local. No API keys, no internet at runtime.
 - Lives in your menu bar. Quits cleanly. Clears its cache on quit.
@@ -14,18 +16,18 @@ A small macOS menu bar app that reads Claude Code's last response aloud, in af_s
 ## Install
 
 ```bash
-git clone https://github.com/<you>/claude-tts.git
-cd claude-tts
+git clone https://github.com/<you>/claudible.git
+cd claudible
 ./install.sh
 ```
 
-Then open `claude-tts.app` from `/Applications/`. First time you press a hotkey, macOS will ask for Accessibility permission - grant it.
+Then open `Claudible.app` from `/Applications/`. First time you press a hotkey, macOS will ask for Accessibility permission - grant it.
 
 The installer:
 
 - Downloads the Kokoro model (~340 MB) to `~/.local/share/kokoro-tts/`
 - Builds the `.app` bundle with `py2app`
-- Copies it to `/Applications/claude-tts.app`
+- Copies it to `/Applications/Claudible.app`
 - Wires a Claude Code Stop hook so the app gets a "prefetch" signal as soon as Claude finishes a response
 
 ## How it works
@@ -37,10 +39,10 @@ Claude Code finishes a response
 [Stop hook] writes /tmp/claude-last-response.txt
         |
         v
-[Stop hook] sends "prefetch" over /tmp/claude-tts.sock
+[Stop hook] sends "prefetch" over /tmp/claudible.sock
         |
         v
-[claude-tts.app] synthesizes and caches the first chunk
+[Claudible.app] synthesizes and caches the first chunk
         |
         v
 You press Cmd+Shift+S
@@ -75,4 +77,4 @@ LICENSE
 
 ## Why not Apple's Speak Selection (Option+Esc)?
 
-Apple's built-in feature works great with Siri voices, but you have to manually select text first. claude-tts is for the case where you just want the last assistant message read without selecting anything. Use both - they complement each other.
+Apple's built-in feature works great with Siri voices, but you have to manually select text first. Claudible is for the case where you just want the last assistant message read without selecting anything. Use both - they complement each other.
