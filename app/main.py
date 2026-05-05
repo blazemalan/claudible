@@ -152,8 +152,9 @@ class Pipeline:
             orig_session = ort.InferenceSession
 
             def _patched_session(*args, **kwargs):
-                if "providers" not in kwargs:
-                    kwargs["providers"] = preferred
+                # Always override providers so kokoro-onnx (which hard-codes
+                # CPUExecutionProvider) gets CoreML when available.
+                kwargs["providers"] = preferred
                 return orig_session(*args, **kwargs)
 
             ort.InferenceSession = _patched_session
