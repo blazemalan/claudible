@@ -79,7 +79,6 @@ ok "Stop hook wired"
 
 echo
 bold "Done."
-echo "Open $APP_DEST. The first time you press Cmd+Shift+S, macOS will prompt"
-echo "for Accessibility permission. Grant it once and global hotkeys are live:"
-echo "  Cmd+Shift+S -> speak Claude's last response (toggle)"
-echo "  Cmd+Shift+H -> speak the highlighted text"
+echo "Open $APP_DEST. First time you press Cmd+Option+S, macOS will prompt for"
+echo "Accessibility permission for skhd. Grant it once and the hotkey is live:"
+echo "  Cmd+Option+S -> speak Claude's last response (toggle)"
