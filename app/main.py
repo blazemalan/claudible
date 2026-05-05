@@ -367,17 +367,32 @@ class App(rumps.App):
         self.pipeline.play_text(text)
 
     def _do_selection(self):
+        log("selection: starting")
         orig = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
-        subprocess.run(
-            ["osascript", "-e",
-             'tell application "System Events" to keystroke "c" using command down'],
-            check=False,
-        )
-        time.sleep(0.12)
+        # Send Cmd+C from inside Claudible via Quartz (not osascript) so it
+        # uses our Accessibility permission rather than osascript's.
+        try:
+            from Quartz import (
+                CGEventCreateKeyboardEvent, CGEventPost, CGEventSetFlags,
+                kCGHIDEventTap, kCGEventFlagMaskCommand,
+            )
+            kCC = 8  # 'c' key code
+            down = CGEventCreateKeyboardEvent(None, kCC, True)
+            CGEventSetFlags(down, kCGEventFlagMaskCommand)
+            CGEventPost(kCGHIDEventTap, down)
+            up = CGEventCreateKeyboardEvent(None, kCC, False)
+            CGEventSetFlags(up, kCGEventFlagMaskCommand)
+            CGEventPost(kCGHIDEventTap, up)
+        except Exception as e:
+            log(f"selection: CGEventPost failed: {e}")
+            return
+        time.sleep(0.18)
         sel = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
         subprocess.run(["pbcopy"], input=orig, text=True)
         if not sel or sel == orig:
+            log("selection: clipboard unchanged (nothing selected)")
             return
+        log(f"selection: speaking {len(sel)} chars")
         self.pipeline.play_text(sel)
 
     def _start_socket_server(self):
