@@ -369,13 +369,23 @@ class App(rumps.App):
     def _do_selection(self):
         log("selection: starting")
         orig = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
-        # Send Cmd+C from inside Claudible via Quartz (not osascript) so it
-        # uses our Accessibility permission rather than osascript's.
         try:
             from Quartz import (
                 CGEventCreateKeyboardEvent, CGEventPost, CGEventSetFlags,
+                CGEventSourceFlagsState, kCGEventSourceStateHIDSystemState,
                 kCGHIDEventTap, kCGEventFlagMaskCommand,
+                kCGEventFlagMaskShift, kCGEventFlagMaskAlternate,
+                kCGEventFlagMaskControl,
             )
+            # Wait for the user to release the hotkey modifiers (Cmd/Shift/etc).
+            # If we send Cmd+C while Shift is still down, apps see Cmd+Shift+C.
+            modifiers_mask = (kCGEventFlagMaskCommand | kCGEventFlagMaskShift
+                              | kCGEventFlagMaskAlternate | kCGEventFlagMaskControl)
+            for _ in range(40):  # up to 0.4 s
+                if not (CGEventSourceFlagsState(kCGEventSourceStateHIDSystemState)
+                        & modifiers_mask):
+                    break
+                time.sleep(0.01)
             kCC = 8  # 'c' key code
             down = CGEventCreateKeyboardEvent(None, kCC, True)
             CGEventSetFlags(down, kCGEventFlagMaskCommand)
