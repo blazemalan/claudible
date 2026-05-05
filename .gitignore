@@ -1,3 +1,13 @@
 .DS_Store
 *.log
 *.bak
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Virtual env + build outputs
+app/.venv/
+app/build/
+app/dist/
