@@ -34,16 +34,15 @@ DEFAULT_VOICE = "af_heart"
 DEFAULT_SPEED = 1.0
 TARGET_CHUNK_CHARS = 400
 VOICES = [
-    # American female
-    "af_heart", "af_bella", "af_nicole", "af_sarah", "af_sky", "af_nova",
-    "af_alloy", "af_aoede", "af_jessica", "af_kore", "af_river",
-    # American male
-    "am_adam", "am_echo", "am_eric", "am_liam", "am_michael", "am_onyx",
-    "am_fenrir", "am_puck", "am_santa",
-    # British female
-    "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
-    # British male
-    "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
+    # A grade (top quality, per hexgrad/Kokoro-82M VOICES.md)
+    "af_heart", "af_bella",
+    # B grade - American female
+    "af_nicole", "af_sarah", "af_sky", "af_nova",
+    "af_alloy", "af_aoede", "af_kore",
+    # B grade - American male
+    "am_fenrir", "am_michael", "am_puck",
+    # B grade - British
+    "bf_emma", "bf_isabella", "bm_fable", "bm_george",
 ]
 SPEEDS = [0.9, 1.0, 1.1, 1.2]
 
