@@ -399,6 +399,10 @@ class App(rumps.App):
                                 args=(text,),
                                 daemon=True,
                             ).start()
+                        elif data == "toggle":
+                            self._toggle_speak()
+                        elif data == "selection":
+                            self._do_selection()
                     finally:
                         conn.close()
             except Exception as e:
