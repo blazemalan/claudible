@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="app/icon.png" alt="Claudible" width="160" />
+</p>
+
 # Claudible
 
 A small macOS menu bar app that reads Claude Code's last response aloud with one global hotkey.
