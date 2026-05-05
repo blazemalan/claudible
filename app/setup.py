@@ -21,6 +21,7 @@ OPTIONS = {
         "NSHumanReadableCopyright": "MIT",
     },
     "packages": ["rumps"],
+    "resources": ["menubarTemplate.png"],
 }
 
 setup(

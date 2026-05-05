@@ -266,7 +266,18 @@ class Pipeline:
 
 class App(rumps.App):
     def __init__(self):
-        super().__init__("Claudible", title="🗣 …", quit_button=None)
+        # Resolve the menu bar icon both in dev (alongside main.py) and in the
+        # bundled .app (Resources/menubarTemplate.png).
+        here = Path(__file__).resolve().parent
+        icon_path = here / "menubarTemplate.png"
+        if not icon_path.exists():
+            icon_path = here.parent / "Resources" / "menubarTemplate.png"
+        super().__init__(
+            "Claudible",
+            icon=str(icon_path) if icon_path.exists() else None,
+            template=True,
+            quit_button=None,
+        )
         self.pipeline = Pipeline()
         self.menu = [
             rumps.MenuItem("Speak last  (Cmd+Shift+S)", callback=self._toggle_speak_menu),
@@ -285,10 +296,8 @@ class App(rumps.App):
     def _init_bg(self):
         try:
             self.pipeline.load_model()
-            self.title = "🗣"
         except Exception as e:
             log(f"model load failed: {e}")
-            self.title = "🗣 ⚠"
             rumps.notification(
                 "Claudible", "Model load failed", str(e)[:120]
             )
