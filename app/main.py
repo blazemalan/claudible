@@ -375,7 +375,6 @@ class App(rumps.App):
             self._build_speed_menu(),
             None,
             rumps.MenuItem("Open log", callback=self._open_log),
-            rumps.MenuItem("Edit voices...", callback=self._edit_voices),
             rumps.MenuItem("Clear cache", callback=self._clear_cache),
             None,
             rumps.MenuItem("Quit", callback=self._on_quit),
@@ -434,15 +433,6 @@ class App(rumps.App):
 
     def _open_log(self, _):
         subprocess.Popen(["open", str(LOG_FILE)])
-
-    def _edit_voices(self, _):
-        if not VOICES_CONFIG.exists():
-            write_default_voices_config()
-            rumps.notification(
-                "Claudible", "Voices config",
-                "Created at ~/.config/claudible/voices.json. Restart Claudible after editing."
-            )
-        subprocess.Popen(["open", "-t", str(VOICES_CONFIG)])
 
     def _clear_cache(self, _):
         if CACHE_DIR.exists():
