@@ -464,7 +464,11 @@ class App(rumps.App):
                 srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 srv.bind(str(SOCKET_PATH))
                 srv.listen(5)
-                while True:
+            except Exception as e:
+                log(f"socket server bind error: {e}")
+                return
+            while True:
+                try:
                     conn, _ = srv.accept()
                     try:
                         chunks = []
@@ -479,7 +483,7 @@ class App(rumps.App):
                         head, _, body = data.partition("\n")
                         head = head.strip()
                         if head == "prefetch" and CAPTURE_FILE.exists():
-                            text = CAPTURE_FILE.read_text()
+                            text = CAPTURE_FILE.read_text(encoding="utf-8", errors="replace")
                             threading.Thread(
                                 target=self.pipeline.prefetch_first,
                                 args=(text,),
@@ -489,8 +493,9 @@ class App(rumps.App):
                             self._toggle_speak()
                     finally:
                         conn.close()
-            except Exception as e:
-                log(f"socket server error: {e}")
+                except Exception as e:
+                    import traceback
+                    log(f"socket server error: {e}\n{traceback.format_exc()}")
 
         threading.Thread(target=serve, daemon=True).start()
 
