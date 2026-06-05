@@ -31,6 +31,7 @@ SOCKET_PATH = Path("/tmp/claudible.sock")
 LOG_FILE = Path("/tmp/claudible.log")
 
 VOICES_CONFIG = HOME / ".config/claudible/voices.json"
+SETTINGS_FILE = HOME / ".config/claudible/settings.json"
 DEFAULT_SPEED = 1.0
 TARGET_CHUNK_CHARS = 400
 
@@ -103,6 +104,45 @@ def log(msg: str) -> None:
             f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
     except Exception:
         pass
+
+
+# ---------- Remembered settings (voice + speed persist across launches) ----------
+
+
+def load_settings() -> tuple[str, float]:
+    """Voice + speed remembered from the last session, validated against the
+    current voice list and speed options. Falls back to defaults on a missing
+    file, parse error, or a value that's no longer available."""
+    import json
+    voice, speed = DEFAULT_VOICE, DEFAULT_SPEED
+    try:
+        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return voice, speed
+    if data.get("voice") in {vid for _label, vid in VOICES}:
+        voice = data["voice"]
+    try:
+        if float(data.get("speed")) in SPEEDS:
+            speed = float(data["speed"])
+    except (TypeError, ValueError):
+        pass
+    return voice, speed
+
+
+def save_settings(voice: str, speed: float) -> None:
+    """Persist the current voice + speed so the next launch restores them."""
+    import json
+    try:
+        SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SETTINGS_FILE.write_text(
+            json.dumps({"voice": voice, "speed": speed}, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except Exception as e:
+        log(f"could not save settings: {e}")
+
+
+INITIAL_VOICE, INITIAL_SPEED = load_settings()
 
 
 # ---------- Markdown stripping (mistune if available, regex fallback) ----------
@@ -369,6 +409,9 @@ class App(rumps.App):
             quit_button=None,
         )
         self.pipeline = Pipeline()
+        self.pipeline.voice = INITIAL_VOICE
+        self.pipeline.speed = INITIAL_SPEED
+        log(f"restored settings: voice={INITIAL_VOICE} speed={INITIAL_SPEED}")
         self.menu = [
             rumps.MenuItem("Speak last  (Cmd+Option+S)", callback=self._toggle_speak_menu),
             None,
@@ -403,7 +446,7 @@ class App(rumps.App):
         for label, voice_id in VOICES:
             mi = rumps.MenuItem(label, callback=self._set_voice)
             mi._claudible_voice_id = voice_id
-            if voice_id == DEFAULT_VOICE:
+            if voice_id == INITIAL_VOICE:
                 mi.state = 1
             m.add(mi)
         return m
@@ -412,7 +455,7 @@ class App(rumps.App):
         m = rumps.MenuItem("Speed")
         for s in SPEEDS:
             mi = rumps.MenuItem(f"{s}x", callback=self._set_speed)
-            if s == DEFAULT_SPEED:
+            if s == INITIAL_SPEED:
                 mi.state = 1
             m.add(mi)
         return m
@@ -422,12 +465,14 @@ class App(rumps.App):
             self.menu["Voice"][label].state = 0
         sender.state = 1
         self.pipeline.voice = getattr(sender, "_claudible_voice_id", sender.title)
+        save_settings(self.pipeline.voice, self.pipeline.speed)
 
     def _set_speed(self, sender):
         for s in SPEEDS:
             self.menu["Speed"][f"{s}x"].state = 0
         sender.state = 1
         self.pipeline.speed = float(sender.title.rstrip("x"))
+        save_settings(self.pipeline.voice, self.pipeline.speed)
 
     def _toggle_speak_menu(self, _):
         self._toggle_speak()
@@ -453,7 +498,7 @@ class App(rumps.App):
                 "Claudible", "Nothing captured", "Wait for Claude's next response"
             )
             return
-        text = CAPTURE_FILE.read_text()
+        text = CAPTURE_FILE.read_text(encoding="utf-8", errors="replace")
         self.pipeline.play_text(text)
 
     def _start_socket_server(self):
