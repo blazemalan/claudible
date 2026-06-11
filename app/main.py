@@ -222,6 +222,7 @@ class Pipeline:
         self.stop_flag = threading.Event()
         self.is_playing = threading.Event()
         self.ready = threading.Event()
+        self.on_play_state_change = None
 
     def load_model(self):
         import numpy
@@ -339,6 +340,8 @@ class Pipeline:
             log("already playing, ignoring")
             return
         self.is_playing.set()
+        if self.on_play_state_change:
+            self.on_play_state_change(True)
         self.stop_flag.clear()
         try:
             chunks = self.split_chunks(text)
@@ -379,6 +382,8 @@ class Pipeline:
                     next_path = None
         finally:
             self.is_playing.clear()
+            if self.on_play_state_change:
+                self.on_play_state_change(False)
             log("play done")
 
     def prefetch_first(self, text: str):
@@ -411,9 +416,11 @@ class App(rumps.App):
         self.pipeline = Pipeline()
         self.pipeline.voice = INITIAL_VOICE
         self.pipeline.speed = INITIAL_SPEED
+        self.pipeline.on_play_state_change = self._on_play_state_change
         log(f"restored settings: voice={INITIAL_VOICE} speed={INITIAL_SPEED}")
+        self.speak_menu = rumps.MenuItem("Speak last  (Cmd+Option+S)", callback=self._toggle_speak_menu)
         self.menu = [
-            rumps.MenuItem("Speak last  (Cmd+Option+S)", callback=self._toggle_speak_menu),
+            self.speak_menu,
             None,
             self._build_voice_menu(),
             self._build_speed_menu(),
@@ -424,6 +431,10 @@ class App(rumps.App):
             rumps.MenuItem("Quit", callback=self._on_quit),
         ]
         threading.Thread(target=self._init_bg, daemon=True).start()
+
+    def _on_play_state_change(self, is_playing: bool):
+        self.title = " 🔊" if is_playing else ""
+        self.speak_menu.title = "Stop speaking  (Cmd+Option+S)" if is_playing else "Speak last  (Cmd+Option+S)"
 
     def _init_bg(self):
         try:
