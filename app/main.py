@@ -2,7 +2,7 @@
 """Claudible: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
 
 Single-file design. Loads the Kokoro model on launch, accepts a global toggle
-hotkey (Cmd+Shift+S, delivered via skhd through /tmp/claudible.sock), and
+hotkey (Cmd+Option+S, delivered via skhd through /tmp/claudible.sock), and
 prefetches Claude responses as they finish.
 On Quit, clears /tmp/kokoro-cache.
 """
@@ -565,16 +565,12 @@ class App(rumps.App):
         def on_speak():
             self._toggle_speak()
 
-        def on_select():
-            self._do_selection()
-
         try:
             listener = keyboard.GlobalHotKeys({
-                "<cmd>+<shift>+s": on_speak,
-                "<cmd>+<shift>+h": on_select,
+                "<cmd>+<alt>+s": on_speak,
             })
             listener.start()
-            log("hotkeys active: Cmd+Shift+S, Cmd+Shift+H")
+            log("hotkeys active: Cmd+Option+S")
         except Exception as e:
             log(f"hotkey listener failed: {e}")
             rumps.notification(
