@@ -2,8 +2,8 @@
 """Claudible: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
 
 Single-file design. Loads the Kokoro model on launch, accepts a global toggle
-hotkey (Cmd+Option+S, delivered via skhd through /tmp/claudible.sock), and
-prefetches Claude responses as they finish.
+hotkey (Cmd+Option+S via pynput), and prefetches Claude responses as they
+finish (prefetch signals arrive on /tmp/claudible.sock).
 On Quit, clears /tmp/kokoro-cache.
 """
 from __future__ import annotations
@@ -545,8 +545,6 @@ class App(rumps.App):
                                 args=(text,),
                                 daemon=True,
                             ).start()
-                        elif head == "toggle":
-                            self._toggle_speak()
                     finally:
                         conn.close()
                 except Exception as e:

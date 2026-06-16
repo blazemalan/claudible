@@ -1,2 +1,0 @@
-# Claudible hotkey (delivered via /tmp/claudible.sock to the running app)
-cmd + alt - s : /bin/bash __PROJECT__/scripts/speak-toggle.sh

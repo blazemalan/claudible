@@ -80,5 +80,5 @@ ok "Stop hook wired"
 echo
 bold "Done."
 echo "Open $APP_DEST. First time you press Cmd+Option+S, macOS will prompt for"
-echo "Accessibility permission for skhd. Grant it once and the hotkey is live:"
+echo "Accessibility permission for Claudible. Grant it once and the hotkey is live:"
 echo "  Cmd+Option+S -> speak Claude's last response (toggle)"

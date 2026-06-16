@@ -24,14 +24,13 @@ cd claudible
 ./install.sh
 ```
 
-Then open `Claudible.app` from `/Applications/`. First time you press the hotkey, macOS will ask for Accessibility permission for skhd - grant it once.
+Then open `Claudible.app` from `/Applications/`. First time you press the hotkey, macOS will ask for Accessibility permission for Claudible - grant it once.
 
 The installer:
 
 - Downloads the Kokoro fp16 model (~196 MB total) to `~/.local/share/kokoro-tts/`
 - Builds the `.app` bundle with `py2app`
 - Copies it to `/Applications/Claudible.app`
-- Installs `skhd` (a tiny hotkey daemon) and configures Cmd+Option+S
 - Wires a Claude Code Stop hook so the app gets a "prefetch" signal as soon as Claude finishes a response
 
 ## How it works
@@ -52,7 +51,7 @@ Claude Code finishes a response
 You press Cmd+Option+S
         |
         v
-[skhd] runs scripts/speak-toggle.sh, which sends "toggle" over the socket
+[Claudible.app / pynput] calls _toggle_speak()
         |
         v
 Audio starts ~100 ms later (cache hit), continues sentence-by-sentence
@@ -68,9 +67,6 @@ app/
   requirements.txt
 scripts/
   tts-capture.sh       # Claude Code Stop hook
-  speak-toggle.sh      # what skhd runs on Cmd+Option+S
-skhd/
-  skhdrc               # hotkey config template
 claude-config/
   speak.md             # optional /speak slash command (alternative to hotkey)
 install.sh
@@ -82,5 +78,5 @@ LICENSE
 
 - **Voice** - menu bar -> Voice. Ships with friendly names over Kokoro's A/B grade voices. Default is Scarlett (`af_sky`).
 - **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
-- **Different hotkey** - edit `~/.config/skhd/skhdrc`, run `launchctl kickstart -k gui/$(id -u)/com.koekeishiya.skhd`.
+- **Different hotkey** - not configurable yet; hardcoded to Cmd+Option+S in `app/main.py`.
 
