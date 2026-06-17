@@ -24,7 +24,19 @@ cd claudible
 ./install.sh
 ```
 
-Then open `Claudible.app` from `/Applications/`. First time you press the hotkey, macOS will ask for Accessibility permission for Claudible - grant it once.
+Then open `Claudible.app` from `/Applications/`.
+
+### Grant Accessibility permission (required for the hotkey)
+
+The global hotkey needs macOS **Accessibility** permission. On first launch Claudible asks macOS to show the "allow control" prompt - click **Open System Settings** and enable **Claudible**, then **relaunch the app**.
+
+If no prompt appears (macOS doesn't always show it), grant it manually:
+
+1. **System Settings → Privacy & Security → Accessibility**
+2. Enable **Claudible** (or click **+** and add `/Applications/Claudible.app`)
+3. **Quit and relaunch** Claudible
+
+Until this is granted, Cmd+Option+S does nothing - the app logs the reason to `/tmp/claudible.log`. Note: because the app is ad-hoc signed, macOS may drop this permission after a rebuild/reinstall, so you may need to re-enable it.
 
 The installer:
 

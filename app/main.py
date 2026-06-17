@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Claudible: menu bar app that reads Claude Code's last response aloud via Kokoro TTS.
 
-Single-file design. Loads the Kokoro model on launch, accepts a global toggle
-hotkey (Cmd+Option+S, delivered via skhd through /tmp/claudible.sock), and
-prefetches Claude responses as they finish.
+Single-file design. Loads the Kokoro model on launch, registers a global toggle
+hotkey (Cmd+Option+S, via in-process pynput; requires macOS Accessibility
+permission), and prefetches Claude responses as they finish (prefetch/toggle
+signals also arrive on /tmp/claudible.sock).
 On Quit, clears /tmp/kokoro-cache.
 """
 from __future__ import annotations
@@ -415,12 +416,34 @@ class App(rumps.App):
 
         threading.Thread(target=serve, daemon=True).start()
 
+    def _accessibility_trusted(self, prompt: bool = False) -> bool:
+        """True if Claudible has macOS Accessibility permission (required for the
+        global hotkey). With prompt=True, also asks macOS to show its "allow
+        control" dialog and add Claudible to the Accessibility list. Returns True
+        if the check itself is unavailable, so we never block startup."""
+        try:
+            from HIServices import (
+                AXIsProcessTrustedWithOptions,
+                kAXTrustedCheckOptionPrompt,
+            )
+            return bool(
+                AXIsProcessTrustedWithOptions({kAXTrustedCheckOptionPrompt: bool(prompt)})
+            )
+        except Exception as e:
+            log(f"accessibility check unavailable: {e}")
+            return True
+
     def _start_hotkeys(self):
         try:
             from pynput import keyboard
         except ImportError:
             log("pynput not installed; hotkeys disabled")
             return
+
+        # The global hotkey needs macOS Accessibility permission. pynput's
+        # listener "starts" whether or not it's granted, so check explicitly and
+        # prompt the user rather than silently doing nothing.
+        trusted = self._accessibility_trusted(prompt=True)
 
         def on_speak():
             self._toggle_speak()
@@ -430,13 +453,27 @@ class App(rumps.App):
                 "<cmd>+<alt>+s": on_speak,
             })
             listener.start()
-            log("hotkeys active: Cmd+Option+S")
         except Exception as e:
             log(f"hotkey listener failed: {e}")
             rumps.notification(
                 "Claudible",
                 "Hotkeys disabled",
                 "Grant Accessibility permission in System Settings",
+            )
+            return
+
+        if trusted:
+            log("hotkeys active: Cmd+Option+S")
+        else:
+            log(
+                "hotkey listener started, but Accessibility permission is NOT "
+                "granted - Cmd+Option+S will do nothing until you allow Claudible "
+                "in System Settings > Privacy & Security > Accessibility, then relaunch"
+            )
+            rumps.notification(
+                "Claudible",
+                "Accessibility permission needed",
+                "Allow Claudible under System Settings > Privacy & Security > Accessibility, then relaunch.",
             )
 
     def _cleanup(self):

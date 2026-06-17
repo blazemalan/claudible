@@ -79,6 +79,8 @@ ok "Stop hook wired"
 
 echo
 bold "Done."
-echo "Open $APP_DEST. First time you press Cmd+Option+S, macOS will prompt for"
-echo "Accessibility permission for Claudible. Grant it once and the hotkey is live:"
-echo "  Cmd+Option+S -> speak Claude's last response (toggle)"
+echo "Open $APP_DEST. The hotkey needs macOS Accessibility permission:"
+echo "  System Settings > Privacy & Security > Accessibility > enable Claudible,"
+echo "  then quit and relaunch the app. (Claudible asks macOS to prompt on first"
+echo "  launch, but macOS doesn't always show it - enable it manually if needed.)"
+echo "Then:  Cmd+Option+S -> speak Claude's last response (toggle)"

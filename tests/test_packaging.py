@@ -100,6 +100,16 @@ def test_third_party_imports_bundled():
         'onnxruntime': 'onnxruntime', # usually part of kokoro-onnx reqs, but maybe needed
     }
 
+    # pyobjc framework modules (e.g. HIServices for the Accessibility check, Quartz,
+    # AppKit, Foundation) are pulled in transitively by rumps/pynput's pyobjc
+    # dependency and bundled by py2app via those packages. They are never declared
+    # directly in requirements.txt, so exempt them from the "must be declared" check.
+    PYOBJC_FRAMEWORKS = {
+        'objc', 'Foundation', 'AppKit', 'Cocoa', 'CoreFoundation', 'Quartz',
+        'HIServices', 'ApplicationServices', 'CoreServices', 'LaunchServices',
+    }
+    third_party_imports = {imp for imp in third_party_imports if imp not in PYOBJC_FRAMEWORKS}
+
     # 4. Extract config from setup.py and requirements.txt
     setup_packages = extract_packages_from_setup(setup_py)
     requirements = extract_requirements(req_txt)
