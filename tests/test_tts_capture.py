@@ -20,7 +20,8 @@ def create_fake_tail(tmp_path):
         "#!/bin/bash\n"
         'if [ "$1" = "-r" ]; then\n'
         "  shift\n"
-        '  tac "$@"\n'
+        # Reverse lines portably: tac on Linux, `tail -r` on macOS (no tac there).
+        '  if command -v tac >/dev/null 2>&1; then tac "$@"; else /usr/bin/tail -r "$@"; fi\n'
         "else\n"
         '  /usr/bin/tail "$@"\n'
         "fi\n"
@@ -55,10 +56,21 @@ def start_socket_server(sock_path, timeout=5.0):
     thread.start()
     return received, thread
 
-def test_happy_path(tmp_path):
+@pytest.fixture
+def short_sock():
+    """A unix socket path short enough for macOS's ~104-char AF_UNIX limit;
+    pytest's tmp_path (under /var/folders) overflows it."""
+    import tempfile
+    d = tempfile.mkdtemp(prefix="cl", dir="/tmp")
+    try:
+        yield os.path.join(d, "s.sock")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+def test_happy_path(tmp_path, short_sock):
     # Setup paths
     capture_file = tmp_path / "claude-last-response.txt"
-    socket_path = tmp_path / "claudible.sock"
+    socket_path = short_sock
     transcript_file = tmp_path / "transcript.jsonl"
 
     # Create the fake tail command
@@ -105,9 +117,9 @@ def test_happy_path(tmp_path):
     assert len(received) == 1
     assert received[0] == b"prefetch"
 
-def test_short_message(tmp_path):
+def test_short_message(tmp_path, short_sock):
     capture_file = tmp_path / "claude-last-response.txt"
-    socket_path = tmp_path / "claudible.sock"
+    socket_path = short_sock
     transcript_file = tmp_path / "transcript.jsonl"
 
     bin_dir = create_fake_tail(tmp_path)
@@ -141,7 +153,7 @@ def test_short_message(tmp_path):
     assert not capture_file.exists()
     assert len(received) == 0
 
-def test_tool_result_first(tmp_path):
+def test_tool_result_first(tmp_path, short_sock):
     """
     If a tool_result appears before the newest assistant text in the newest-first scan
     (which means the tool_result is chronologically AFTER the assistant text),
@@ -149,7 +161,7 @@ def test_tool_result_first(tmp_path):
     and skips it.
     """
     capture_file = tmp_path / "claude-last-response.txt"
-    socket_path = tmp_path / "claudible.sock"
+    socket_path = short_sock
     transcript_file = tmp_path / "transcript.jsonl"
 
     bin_dir = create_fake_tail(tmp_path)
