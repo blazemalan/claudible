@@ -2,8 +2,8 @@
 # Stop hook for Claude Code: write the last assistant message to a temp file
 # and signal the Claudible app (if running) to pre-synthesize the first chunk.
 
-CAPTURE_FILE="/tmp/claude-last-response.txt"
-SOCKET="/tmp/claudible.sock"
+CAPTURE_FILE="${CLAUDIBLE_CAPTURE_FILE:-/tmp/claude-last-response.txt}"
+SOCKET="${CLAUDIBLE_SOCKET:-/tmp/claudible.sock}"
 MIN_LENGTH=50
 
 sleep 1  # let transcript flush
