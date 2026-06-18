@@ -92,3 +92,19 @@ LICENSE
 - **Speed** - menu bar -> Speed. 0.9x, 1.0x, 1.1x, 1.2x.
 - **Different hotkey** - not configurable yet; hardcoded to Cmd+Option+S in `app/main.py`.
 
+## Configuration
+
+- **`~/.config/claudible/voices.json`** - overrides the default voice list. If missing or invalid, Claudible falls back to built-in voices. Reloads on app restart.
+  - Requires a `default` string (a Kokoro voice id) and a `voices` array containing objects with `label` and `id` keys.
+  ```json
+  {
+    "default": "af_sky",
+    "voices": [
+      { "label": "Scarlett", "id": "af_sky" },
+      { "label": "Wren", "id": "af_alloy" }
+    ]
+  }
+  ```
+- **`~/.config/claudible/settings.json`** - automatically stores your last-used voice and speed from the menu bar. Users normally do not need to edit this file.
+- **`CLAUDIBLE_CAPTURE_FILE`** (default `/tmp/claude-last-response.txt`) - the temporary file where the Claude Code Stop hook (`scripts/tts-capture.sh`) writes the assistant's last message.
+- **`CLAUDIBLE_SOCKET`** (default `/tmp/claudible.sock`) - the Unix socket used for IPC. Both the stop hook and the manual toggle script (`scripts/speak-toggle.sh`) ping this socket. You would only need to change these environment variables for non-default install paths.
