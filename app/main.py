@@ -48,6 +48,7 @@ from claudible_core import (
     strip_markdown,
     _regex_strip,
     log,
+    chunk_text,
 )
 
 def write_default_voices_config() -> None:
@@ -125,23 +126,7 @@ class Pipeline:
         self.ready.set()
 
     def split_chunks(self, text: str) -> list[str]:
-        text = strip_markdown(text)
-        if not text:
-            return []
-        sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
-        chunks: list[str] = []
-        cur = ""
-        for s in sents:
-            if not cur:
-                cur = s
-            elif len(cur) + 1 + len(s) <= TARGET_CHUNK_CHARS:
-                cur = cur + " " + s
-            else:
-                chunks.append(cur)
-                cur = s
-        if cur:
-            chunks.append(cur)
-        return chunks
+        return chunk_text(text, TARGET_CHUNK_CHARS)
 
     def cache_path(self, sentence: str) -> Path:
         h = hashlib.sha256(
