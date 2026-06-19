@@ -149,3 +149,23 @@ def _regex_strip(text: str) -> str:
     text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.MULTILINE)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+def chunk_text(text: str, target_chars: int = 400) -> list[str]:
+    """Splits text into chunks of sentences, up to target_chars length."""
+    text = strip_markdown(text)
+    if not text:
+        return []
+    sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+    chunks: list[str] = []
+    cur = ""
+    for s in sents:
+        if not cur:
+            cur = s
+        elif len(cur) + 1 + len(s) <= target_chars:
+            cur = cur + " " + s
+        else:
+            chunks.append(cur)
+            cur = s
+    if cur:
+        chunks.append(cur)
+    return chunks
