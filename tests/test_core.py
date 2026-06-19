@@ -45,17 +45,17 @@ def test_strip_markdown_mistune():
     res = strip_markdown(text)
 
     # Assertions based on plain text mistune plugin logic
-    assert "Heading" in res
+    assert "Heading." in res
     assert "bold" in res
     assert "**bold**" not in res
     assert "italic" in res
     assert "print('hello')" not in res
-    assert "Inline snippet" in res
+    assert "Inline snippet." in res
     assert "[Link](" in res # Testing verbatim outputs to match what the code actually does
     assert "![Image](" in res
     assert "https://foo.bar/baz" not in res
     assert "\u00e9 \U0001f600" in res
-    assert "Item 1" in res
+    assert "Item 1." in res
 
     # Mistune renderer condenses everything down, typically adding periods and spaces
     # We mainly care that the noise is gone.
