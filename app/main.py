@@ -283,6 +283,12 @@ class App(rumps.App):
         self.speak_menu.title = "Stop speaking  (Cmd+Option+S)" if is_playing else "Speak last  (Cmd+Option+S)"
 
     def _init_bg(self):
+        if not VOICES_CONFIG.exists():
+            try:
+                write_default_voices_config()
+            except Exception as e:
+                log(f"could not write default voices config: {e}")
+
         try:
             self.pipeline.load_model()
             self.title = ""

@@ -1,12 +1,23 @@
 import sys
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 import pytest
 
 # Add the app directory to sys.path so we can import claudible_core directly
 # as `from claudible_core import ...`, mimicking main.py's runtime environment.
 app_dir = Path(__file__).parent.parent / "app"
 sys.path.insert(0, str(app_dir))
+
+# Mock macOS dependencies so we can import main on Linux.
+class MockRumpsApp:
+    def __init__(self, *args, **kwargs):
+        pass
+
+mock_rumps = MagicMock()
+mock_rumps.App = MockRumpsApp
+sys.modules['rumps'] = mock_rumps
+import main
 
 import claudible_core
 from claudible_core import (
@@ -198,3 +209,49 @@ def test_load_settings_invalid_values(monkeypatch, tmp_path):
     # isn't in VOICES and 9.9 isn't in SPEEDS.
     assert voice == claudible_core.DEFAULT_VOICE
     assert speed == DEFAULT_SPEED
+
+def test_write_default_voices_config_creates_file(monkeypatch, tmp_path):
+    """Test write_default_voices_config correctly creates the voices config."""
+    fake_config = tmp_path / "voices.json"
+    monkeypatch.setattr(claudible_core, "VOICES_CONFIG", fake_config)
+    monkeypatch.setattr(main, "VOICES_CONFIG", fake_config)
+
+    # Mock App dependencies to safely run _init_bg
+    monkeypatch.setattr(main, "Pipeline", MagicMock())
+
+    app = main.App()
+    app._start_socket_server = MagicMock()
+    app._start_hotkeys = MagicMock()
+
+    assert not fake_config.exists()
+
+    app._init_bg()
+
+    assert fake_config.exists()
+    default, voices = claudible_core.load_voices_config()
+    assert default == claudible_core._BUILTIN_DEFAULT_VOICE
+    assert voices == claudible_core._BUILTIN_VOICES
+
+
+def test_write_default_voices_config_does_not_overwrite(monkeypatch, tmp_path):
+    """Test write_default_voices_config respects existing configurations."""
+    fake_config = tmp_path / "voices.json"
+    custom_content = json.dumps({"default": "test_voice", "voices": []})
+    fake_config.write_text(custom_content)
+
+    monkeypatch.setattr(claudible_core, "VOICES_CONFIG", fake_config)
+    monkeypatch.setattr(main, "VOICES_CONFIG", fake_config)
+
+    # Mock App dependencies
+    monkeypatch.setattr(main, "Pipeline", MagicMock())
+
+    app = main.App()
+    app._start_socket_server = MagicMock()
+    app._start_hotkeys = MagicMock()
+
+    assert fake_config.exists()
+
+    app._init_bg()
+
+    # Assert it was not overwritten
+    assert fake_config.read_text() == custom_content
