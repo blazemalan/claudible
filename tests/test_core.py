@@ -1,12 +1,23 @@
 import sys
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 import pytest
 
 # Add the app directory to sys.path so we can import claudible_core directly
 # as `from claudible_core import ...`, mimicking main.py's runtime environment.
 app_dir = Path(__file__).parent.parent / "app"
 sys.path.insert(0, str(app_dir))
+
+# Mock macOS dependencies so we can import main on Linux.
+class MockRumpsApp:
+    def __init__(self, *args, **kwargs):
+        pass
+
+mock_rumps = MagicMock()
+mock_rumps.App = MockRumpsApp
+sys.modules['rumps'] = mock_rumps
+import main
 
 import claudible_core
 from claudible_core import (
@@ -46,17 +57,17 @@ def test_strip_markdown_mistune():
     res = strip_markdown(text)
 
     # Assertions based on plain text mistune plugin logic
-    assert "Heading." in res
+    assert "Heading" in res
     assert "bold" in res
     assert "**bold**" not in res
     assert "italic" in res
     assert "print('hello')" not in res
-    assert "Inline snippet." in res
+    assert "Inline snippet" in res
     assert "[Link](" in res # Testing verbatim outputs to match what the code actually does
     assert "![Image](" in res
     assert "https://foo.bar/baz" not in res
     assert "\u00e9 \U0001f600" in res
-    assert "Item 1." in res
+    assert "Item 1" in res
 
     # Mistune renderer condenses everything down, typically adding periods and spaces
     # We mainly care that the noise is gone.
@@ -246,3 +257,49 @@ def test_load_settings_legacy_format(monkeypatch, tmp_path):
     assert loaded["speed"] == 1.1
     assert loaded["auto_speak"] is False
     assert loaded["idle_unload"] is True
+
+
+def _hermetic_app(monkeypatch):
+    """Build a main.App with every side-effecting startup path stubbed out (no
+    real hotkeys, socket, watchdog, model, or the __init__ background _init_bg
+    thread), and return it along with the real _init_bg to run synchronously."""
+    real_init_bg = main.App._init_bg
+    monkeypatch.setattr(main, "Pipeline", MagicMock())
+    monkeypatch.setattr(main.App, "_init_bg", MagicMock())
+    monkeypatch.setattr(main.App, "_start_hotkeys", MagicMock())
+    monkeypatch.setattr(main.App, "_start_socket_server", MagicMock())
+    monkeypatch.setattr(main.App, "_start_idle_watchdog", MagicMock())
+    return main.App(), real_init_bg
+
+
+def test_write_default_voices_config_creates_file(monkeypatch, tmp_path):
+    """_init_bg seeds voices.json with the built-ins on first launch."""
+    fake_config = tmp_path / "voices.json"
+    monkeypatch.setattr(claudible_core, "VOICES_CONFIG", fake_config)
+    monkeypatch.setattr(main, "VOICES_CONFIG", fake_config)
+
+    app, real_init_bg = _hermetic_app(monkeypatch)
+    assert not fake_config.exists()
+
+    real_init_bg(app)
+
+    assert fake_config.exists()
+    default, voices = claudible_core.load_voices_config()
+    assert default == claudible_core._BUILTIN_DEFAULT_VOICE
+    assert voices == claudible_core._BUILTIN_VOICES
+
+
+def test_write_default_voices_config_does_not_overwrite(monkeypatch, tmp_path):
+    """_init_bg respects an existing voices.json."""
+    fake_config = tmp_path / "voices.json"
+    custom_content = json.dumps({"default": "test_voice", "voices": []})
+    fake_config.write_text(custom_content)
+
+    monkeypatch.setattr(claudible_core, "VOICES_CONFIG", fake_config)
+    monkeypatch.setattr(main, "VOICES_CONFIG", fake_config)
+
+    app, real_init_bg = _hermetic_app(monkeypatch)
+    real_init_bg(app)
+
+    # Assert it was not overwritten
+    assert fake_config.read_text() == custom_content

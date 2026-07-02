@@ -55,6 +55,7 @@ from claudible_core import (
     speakable_text,
     _regex_strip,
     log,
+    chunk_text,
 )
 
 def write_default_voices_config() -> None:
@@ -178,23 +179,7 @@ class Pipeline:
             log("model unloaded after idle timeout; will reload on next use")
 
     def split_chunks(self, text: str) -> list[str]:
-        text = speakable_text(text)
-        if not text:
-            return []
-        sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
-        chunks: list[str] = []
-        cur = ""
-        for s in sents:
-            if not cur:
-                cur = s
-            elif len(cur) + 1 + len(s) <= TARGET_CHUNK_CHARS:
-                cur = cur + " " + s
-            else:
-                chunks.append(cur)
-                cur = s
-        if cur:
-            chunks.append(cur)
-        return chunks
+        return chunk_text(text, TARGET_CHUNK_CHARS)
 
     def cache_path(self, sentence: str) -> Path:
         h = hashlib.sha256(
@@ -376,6 +361,12 @@ class App(rumps.App):
             self.title = " 🔊" if self.pipeline.is_playing.is_set() else ""
 
     def _init_bg(self):
+        if not VOICES_CONFIG.exists():
+            try:
+                write_default_voices_config()
+            except Exception as e:
+                log(f"could not write default voices config: {e}")
+
         if not self.pipeline.ensure_loaded():
             self.title = " error"
             notify("Model load failed", "See /tmp/claudible.log")
