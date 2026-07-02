@@ -11,6 +11,7 @@ sys.path.insert(0, str(app_dir))
 import claudible_core
 from claudible_core import (
     strip_markdown,
+    speakable_text,
     _regex_strip,
     load_settings,
     save_settings,
@@ -102,6 +103,29 @@ def test_strip_markdown_forces_regex(monkeypatch):
     assert res == "Some code"
 
 
+def test_speakable_text_prose():
+    """Normal prose still gets markdown-stripped."""
+    res = speakable_text("Some **bold** text.")
+    assert "bold" in res
+    assert "**" not in res
+
+
+def test_speakable_text_pure_code_block_not_silent():
+    """A selection that is one big code block must not strip down to silence."""
+    res = speakable_text("```python\nprint('hello')\n```")
+    assert "print" in res  # falls back to raw text instead of reading nothing
+
+
+def test_speakable_text_indented_code_not_silent():
+    res = speakable_text("    x = 1\n    y = 2\n")
+    assert "x = 1" in res
+
+
+def test_speakable_text_empty():
+    assert speakable_text("") == ""
+    assert speakable_text("   \n  ") == ""
+
+
 def test_load_voices_config_missing(monkeypatch, tmp_path):
     """Test load_voices_config when file doesn't exist."""
     fake_config = tmp_path / "voices.json"
@@ -156,14 +180,17 @@ def test_load_save_settings_roundtrip(monkeypatch, tmp_path):
     fake_settings = tmp_path / "settings.json"
     monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
 
-    # We must patch VOICES so the validation in load_settings passes.
-    # The default mock uses _BUILTIN_VOICES, so "af_sarah" is valid.
-    save_settings("af_sarah", 1.2)
+    # "af_sarah" is in _BUILTIN_VOICES, so validation in load_settings passes.
+    settings = dict(claudible_core.DEFAULT_SETTINGS)
+    settings.update({"voice": "af_sarah", "speed": 1.2, "auto_speak": True, "idle_unload": False})
+    save_settings(settings)
     assert fake_settings.exists()
 
-    voice, speed = load_settings()
-    assert voice == "af_sarah"
-    assert speed == 1.2
+    loaded = load_settings()
+    assert loaded["voice"] == "af_sarah"
+    assert loaded["speed"] == 1.2
+    assert loaded["auto_speak"] is True
+    assert loaded["idle_unload"] is False
 
 
 def test_load_settings_missing(monkeypatch, tmp_path):
@@ -171,9 +198,9 @@ def test_load_settings_missing(monkeypatch, tmp_path):
     fake_settings = tmp_path / "settings.json"
     monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
 
-    voice, speed = load_settings()
-    assert voice == claudible_core.DEFAULT_VOICE
-    assert speed == DEFAULT_SPEED
+    loaded = load_settings()
+    assert loaded == claudible_core.DEFAULT_SETTINGS
+    assert loaded is not claudible_core.DEFAULT_SETTINGS  # must be a copy
 
 
 def test_load_settings_corrupt(monkeypatch, tmp_path):
@@ -182,9 +209,16 @@ def test_load_settings_corrupt(monkeypatch, tmp_path):
     fake_settings.write_text("bad json")
     monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
 
-    voice, speed = load_settings()
-    assert voice == claudible_core.DEFAULT_VOICE
-    assert speed == DEFAULT_SPEED
+    assert load_settings() == claudible_core.DEFAULT_SETTINGS
+
+
+def test_load_settings_non_dict_json(monkeypatch, tmp_path):
+    """Valid JSON that isn't an object must not crash load_settings."""
+    fake_settings = tmp_path / "settings.json"
+    fake_settings.write_text("[1, 2, 3]")
+    monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
+
+    assert load_settings() == claudible_core.DEFAULT_SETTINGS
 
 
 def test_load_settings_invalid_values(monkeypatch, tmp_path):
@@ -193,8 +227,22 @@ def test_load_settings_invalid_values(monkeypatch, tmp_path):
     fake_settings.write_text(json.dumps({"voice": "fake_voice_id", "speed": 9.9}))
     monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
 
-    voice, speed = load_settings()
-    # It should fallback to DEFAULT_VOICE/DEFAULT_SPEED since "fake_voice_id"
-    # isn't in VOICES and 9.9 isn't in SPEEDS.
-    assert voice == claudible_core.DEFAULT_VOICE
-    assert speed == DEFAULT_SPEED
+    loaded = load_settings()
+    # It should fallback to defaults since "fake_voice_id" isn't in VOICES and
+    # 9.9 isn't in SPEEDS.
+    assert loaded["voice"] == claudible_core.DEFAULT_VOICE
+    assert loaded["speed"] == DEFAULT_SPEED
+
+
+def test_load_settings_legacy_format(monkeypatch, tmp_path):
+    """Settings written by older versions (voice+speed only) still load, with
+    the newer fields taking their defaults."""
+    fake_settings = tmp_path / "settings.json"
+    fake_settings.write_text(json.dumps({"voice": "af_sarah", "speed": 1.1}))
+    monkeypatch.setattr(claudible_core, "SETTINGS_FILE", fake_settings)
+
+    loaded = load_settings()
+    assert loaded["voice"] == "af_sarah"
+    assert loaded["speed"] == 1.1
+    assert loaded["auto_speak"] is False
+    assert loaded["idle_unload"] is True

@@ -61,32 +61,44 @@ def load_voices_config() -> tuple[str, list[tuple[str, str]]]:
 DEFAULT_VOICE, VOICES = load_voices_config()
 SPEEDS = [0.9, 1.0, 1.1, 1.2]
 
-def load_settings() -> tuple[str, float]:
-    """Voice + speed remembered from the last session, validated against the
-    current voice list and speed options. Falls back to defaults on a missing
-    file, parse error, or a value that's no longer available."""
+DEFAULT_SETTINGS = {
+    "voice": DEFAULT_VOICE,
+    "speed": DEFAULT_SPEED,
+    "auto_speak": False,   # speak responses as soon as Claude finishes them
+    "idle_unload": True,   # free the model's RAM after a long idle stretch
+}
+
+def load_settings() -> dict:
+    """Settings remembered from the last session, validated field-by-field
+    against the current voice list / speed options. Any missing, corrupt, or
+    no-longer-valid value falls back to its default (so files written by older
+    versions keep working)."""
     import json
-    voice, speed = DEFAULT_VOICE, DEFAULT_SPEED
+    settings = dict(DEFAULT_SETTINGS)
     try:
         data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
     except Exception:
-        return voice, speed
+        return settings
+    if not isinstance(data, dict):
+        return settings
     if data.get("voice") in {vid for _label, vid in VOICES}:
-        voice = data["voice"]
+        settings["voice"] = data["voice"]
     try:
         if float(data.get("speed")) in SPEEDS:
-            speed = float(data["speed"])
+            settings["speed"] = float(data["speed"])
     except (TypeError, ValueError):
         pass
-    return voice, speed
+    settings["auto_speak"] = bool(data.get("auto_speak", DEFAULT_SETTINGS["auto_speak"]))
+    settings["idle_unload"] = bool(data.get("idle_unload", DEFAULT_SETTINGS["idle_unload"]))
+    return settings
 
-def save_settings(voice: str, speed: float) -> None:
-    """Persist the current voice + speed so the next launch restores them."""
+def save_settings(settings: dict) -> None:
+    """Persist the current settings so the next launch restores them."""
     import json
     try:
         SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
         SETTINGS_FILE.write_text(
-            json.dumps({"voice": voice, "speed": speed}, indent=2) + "\n",
+            json.dumps(settings, indent=2) + "\n",
             encoding="utf-8",
         )
     except Exception as e:
@@ -135,6 +147,15 @@ def strip_markdown(text: str) -> str:
     out = re.sub(r"`", "", out)
     out = re.sub(r"\s+", " ", out)
     return out.strip()
+
+def speakable_text(text: str) -> str:
+    """Markdown-stripped text for TTS. If stripping deletes everything (e.g. the
+    text is one big code block, which the renderer drops), fall back to the raw
+    text with whitespace collapsed so there is always something to read."""
+    out = strip_markdown(text)
+    if not out:
+        out = re.sub(r"\s+", " ", text).strip()
+    return out
 
 def _regex_strip(text: str) -> str:
     text = re.sub(r"```[\s\S]*?```", " ", text)

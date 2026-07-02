@@ -5,6 +5,61 @@ import tempfile
 import threading
 from pathlib import Path
 
+def _run_script_against_socket(script_name):
+    """Run a client script against a temp socket; return (returncode, bytes received)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        socket_path = os.path.join(tmpdir, "claudible.sock")
+
+        received_data = b""
+        def server_thread():
+            nonlocal received_data
+            server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            server.bind(socket_path)
+            server.listen(1)
+            server.settimeout(2.0)  # Prevent hanging forever
+            try:
+                conn, _ = server.accept()
+                with conn:
+                    received_data = conn.recv(1024)
+            except socket.timeout:
+                pass
+            finally:
+                server.close()
+
+        t = threading.Thread(target=server_thread)
+        t.start()
+
+        import time
+        for _ in range(20):
+            if os.path.exists(socket_path):
+                break
+            time.sleep(0.05)
+
+        script_path = Path(__file__).parent.parent / "scripts" / script_name
+        env = os.environ.copy()
+        env["CLAUDIBLE_SOCKET"] = socket_path
+
+        result = subprocess.run(["bash", str(script_path)], env=env, capture_output=True, text=True)
+        t.join(timeout=3.0)
+        return result.returncode, received_data
+
+
+def test_speak_selection_sends_toggle_selection():
+    returncode, received = _run_script_against_socket("speak-selection.sh")
+    assert returncode == 0
+    assert received == b"toggle-selection"
+
+
+def test_speak_selection_no_socket():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        socket_path = os.path.join(tmpdir, "nonexistent.sock")
+        script_path = Path(__file__).parent.parent / "scripts" / "speak-selection.sh"
+        env = os.environ.copy()
+        env["CLAUDIBLE_SOCKET"] = socket_path
+        result = subprocess.run(["bash", str(script_path)], env=env, capture_output=True, text=True)
+        assert result.returncode == 0
+
+
 def test_speak_toggle_sends_toggle():
     # Create a temporary directory to host the socket
     with tempfile.TemporaryDirectory() as tmpdir:
